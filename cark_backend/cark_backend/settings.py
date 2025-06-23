@@ -105,15 +105,18 @@ WSGI_APPLICATION = 'cark_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+#newupdatess-------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cark',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'NAME': 'cark-database',
+        'USER': 'qxxyvtvwyl@cark-server',
+        'PASSWORD': 'A99IS4$vhPcSpHnF',
+        'HOST': 'cark-server.mysql.database.azure.com',
         'PORT': '3306',
+        'OPTIONS': {
+            'ssl': {'ssl-ca': '/path/to/BaltimoreCyberTrustRoot.crt.pem'},  # هنشرح تحت تجيبه منين
+        }
     }
 }
 
