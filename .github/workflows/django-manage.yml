@@ -27,5 +27,6 @@ jobs:
         SECRET_KEY: dummykey  # مطلوب لتشغيل المشروع ولو مفيش حاجة بتستخدمه مباشرة
         DEBUG: "True"
       run: |
+        cd cark_backend  # ← غيّر دا لو مجلد manage.py مختلف
         python manage.py migrate
         python manage.py collectstatic --noinput
