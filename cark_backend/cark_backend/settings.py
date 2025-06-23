@@ -106,33 +106,33 @@ WSGI_APPLICATION = 'cark_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 #newupdatess-------
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'cark-database',
-#         'USER': 'qxxyvtvwyl@cark-server',
-#         'PASSWORD': 'A99IS4$vhPcSpHnF',
-#         'HOST': 'cark-server.mysql.database.azure.com',
-#         'PORT': '3306',
-#         'OPTIONS': {
-#             'ssl': {'ssl-ca': '/path/to/BaltimoreCyberTrustRoot.crt.pem'},  # هنشرح تحت تجيبه منين
-#         }
-#     }
-# }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
+        'NAME': 'cark-database',
+        'USER': 'qxxyvtvwyl@cark-server',
+        'PASSWORD': 'A99IS4$vhPcSpHnF',
+        'HOST': 'cark-server.mysql.database.azure.com',
         'PORT': '3306',
         'OPTIONS': {
-            'ssl': {'ssl-mode': 'require'},
+            'ssl': {'ssl-ca': 'require'},  # هنشرح تحت تجيبه منين
         }
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': os.environ.get('DB_NAME'),
+#         'USER': os.environ.get('DB_USER'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD'),
+#         'HOST': os.environ.get('DB_HOST'),
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'ssl': {'ssl-mode': 'require'},
+#         }
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
