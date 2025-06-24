@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+import environ
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -106,13 +110,27 @@ WSGI_APPLICATION = 'cark_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 #newupdatess-------
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'cark-database',
+#         'USER': 'qxxyvtvwyl@cark-server',
+#         'PASSWORD': 'A99IS4$vhPcSpHnF',
+#         'HOST': 'cark-server.mysql.database.azure.com',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'ssl': {'ca': os.path.join(BASE_DIR, 'cark_backend', 'certs', 'DigiCertGlobalRootCA.crt.pem')},
+#         }
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cark-database',
-        'USER': 'qxxyvtvwyl@cark-server',
-        'PASSWORD': 'A99IS4$vhPcSpHnF',
-        'HOST': 'cark-server.mysql.database.azure.com',
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST'),
         'PORT': '3306',
         'OPTIONS': {
             'ssl': {'ca': os.path.join(BASE_DIR, 'cark_backend', 'certs', 'DigiCertGlobalRootCA.crt.pem')},
