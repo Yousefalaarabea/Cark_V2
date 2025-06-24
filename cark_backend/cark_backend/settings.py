@@ -115,7 +115,7 @@ DATABASES = {
         'HOST': 'cark-server.mysql.database.azure.com',
         'PORT': '3306',
         'OPTIONS': {
-            'ssl': {'ssl-ca': 'require'},  # هنشرح تحت تجيبه منين
+            'ssl': {'ca': os.path.join(BASE_DIR, 'cark_backend', 'certs', 'DigiCertGlobalRootCA.crt.pem')},
         }
     }
 }
