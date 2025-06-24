@@ -138,7 +138,7 @@ DATABASES = {
         'PORT': '3306',
         'OPTIONS': {
             'ssl': {
-                'ca': os.path.join(BASE_DIR, 'DigiCertGlobalRootCA.crt.pem'),
+                'ca': os.path.join(BASE_DIR,'cark_backend',  'DigiCertGlobalRootCA.crt.pem'),
             }
         }
     }
