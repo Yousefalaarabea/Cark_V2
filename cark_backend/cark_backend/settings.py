@@ -138,8 +138,8 @@ DATABASES = {
         'PORT': '3306',
         'OPTIONS': {
             'ssl': {
-                    'ca': '/home/site/wwwroot/cark_backend/certs/DigiCertGlobalRootCA.crt.pem',
-                },
+                'ca': os.path.join(BASE_DIR, 'DigiCertGlobalRootCA.crt.pem'),
+            }
         }
     }
 }
