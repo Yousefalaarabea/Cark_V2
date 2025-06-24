@@ -5,6 +5,7 @@ from django.conf import settings
 
 
 urlpatterns = [
+    path('', lambda request: JsonResponse({"message": "Welcome to Carك API"})),  # الصفحة الرئيسية
     path('admin/', admin.site.urls),
     path('api/', include('users.urls')),  # إضافة رابط الـ API
     path('api/', include('cars.urls')),  # إضافة رابط الـ API للسيارات
