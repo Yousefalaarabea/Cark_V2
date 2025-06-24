@@ -136,7 +136,9 @@ DATABASES = {
         'HOST': env('DB_HOST'),
         'PORT': '3306',
         'OPTIONS': {
-            'ssl': {'ca': os.path.join(BASE_DIR, 'cark_backend', 'certs', 'DigiCertGlobalRootCA.crt.pem')},
+            'ssl': {
+                    'ca': '/home/site/wwwroot/cark_backend/certs/DigiCertGlobalRootCA.crt.pem',
+                },
         }
     }
 }
