@@ -79,3 +79,9 @@ class UserRolesAPIView(APIView):
             "email": user.email,
             "roles": roles
         }, status=status.HTTP_200_OK)
+
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer  # لازم يكون Serializer بيرجع بيانات المستخدم
+    permission_classes = [permissions.IsAuthenticated]  # أو AllowAny لو مش عايز تحقق
