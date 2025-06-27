@@ -1,11 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import RoleViewSet, UserRoleViewSet , RegisterView   , AssignRolesAPIView , UserRolesAPIView
+from .views import RoleViewSet, UserRoleViewSet , RegisterView   , AssignRolesAPIView , UserRolesAPIView, UserViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet)
 router.register(r'user-roles', UserRoleViewSet)
+router.register(r'users', UserViewSet)
 
 
 
