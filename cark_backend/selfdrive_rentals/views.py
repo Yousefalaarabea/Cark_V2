@@ -15,6 +15,9 @@ import math
 from django.core.files.base import ContentFile
 import base64
 from datetime import timedelta
+from payments.services.payment_gateway import simulate_payment_gateway
+from wallets.models import Wallet, WalletTransaction, TransactionType
+from decimal import Decimal
 
 class SelfDriveRentalViewSet(viewsets.ModelViewSet):
     queryset = SelfDriveRental.objects.all()
@@ -129,9 +132,25 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             return Response({'error_code': 'INVALID_DATA', 'error_message': str(e)}, status=400)
         if payment.excess_amount > 0 and payment.excess_paid_status != 'Paid':
             if payment.payment_method in ['visa', 'wallet']:
-                success, result = fake_payment(payment, request.user, payment_type='excess')
-                if not success:
-                    return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': result}, status=400)
+                payment_response = simulate_payment_gateway(
+                    amount=payment.excess_amount,
+                    payment_method=payment.payment_method,
+                    user=request.user
+                )
+                if payment_response.success:
+                    payment.excess_paid_status = 'Paid'
+                    payment.excess_paid_at = timezone.now()
+                    payment.excess_transaction_id = payment_response.transaction_id
+                    payment.save()
+                    from .models import SelfDriveRentalLog
+                    SelfDriveRentalLog.objects.create(
+                        rental=payment.rental,
+                        action='payment',
+                        user=request.user,
+                        details=f'Excess payment: {payment_response.transaction_id}'
+                    )
+                else:
+                    return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
             else:
                 return Response({'error_code': 'EXCESS_REQUIRED', 'error_message': 'يجب دفع الزيادات إلكترونياً قبل إنهاء الرحلة.'}, status=400)
         old_status = rental.status
@@ -346,6 +365,10 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             return Response({'error_code': 'INVALID_STATUS', 'error_message': 'لا يمكن تأكيد الحجز إلا إذا كان في حالة انتظار تأكيد المالك.'}, status=400)
         if rental.car.owner != request.user:
             return Response({'error_code': 'NOT_OWNER', 'error_message': 'فقط مالك السيارة يمكنه تأكيد الحجز.'}, status=403)
+        # تحقق من رصيد محفظة المالك
+        owner_wallet = rental.car.owner.wallet
+        if owner_wallet.balance < -1000:
+            return Response({'error_code': 'WALLET_LIMIT', 'error_message': 'لا يمكنك تأكيد الحجز. رصيد محفظتك أقل من -1000. يرجى شحن المحفظة أولاً.'}, status=403)
         old_status = rental.status
         rental.status = 'DepositRequired'
         rental.save()
@@ -451,9 +474,26 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             if confirm_remaining_cash is not None:
                 return Response({'error_code': 'CASH_NOT_ALLOWED', 'error_message': 'الدفع إلكتروني ولا يمكن تأكيد استلام كاش.'}, status=400)
             if payment.remaining_paid_status != 'Paid':
-                success, result = fake_payment(payment, request.user, payment_type='remaining')
-                if not success:
-                    return Response({'error_code': 'PAYMENT_FAILED', 'error_message': result}, status=400)
+                from payments.services.payment_gateway import simulate_payment_gateway
+                payment_response = simulate_payment_gateway(
+                    amount=payment.remaining_amount,
+                    payment_method=payment.payment_method,
+                    user=request.user
+                )
+                if payment_response.success:
+                    payment.remaining_paid_status = 'Paid'
+                    payment.remaining_paid_at = timezone.now()
+                    payment.remaining_transaction_id = payment_response.transaction_id
+                    payment.save()
+                    from .models import SelfDriveRentalLog
+                    SelfDriveRentalLog.objects.create(
+                        rental=payment.rental,
+                        action='payment',
+                        user=request.user,
+                        details=f'Remaining payment: {payment_response.transaction_id}'
+                    )
+                else:
+                    return Response({'error_code': 'PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
         # لو كاش لا يتم أي تحديث هنا
         # نفذ هاند أوفر المستأجر
         contract.renter_pickup_done = True
@@ -518,10 +558,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             if payment.remaining_paid_status != 'Paid':
                 return Response({'error_code': 'REMAINING_NOT_PAID', 'error_message': 'يجب دفع باقي المبلغ إلكترونياً قبل إنهاء تسليم المالك.'}, status=400)
             if payment.excess_amount > 0 and payment.excess_paid_status != 'Paid':
-                # دفع الزيادة تلقائياً
-                success, result = fake_payment(payment, request.user, payment_type='excess')
-                if not success:
-                    return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': result}, status=400)
+                return Response({'error_code': 'EXCESS_NOT_PAID', 'error_message': 'يجب دفع الزيادة إلكترونيًا قبل إنهاء تسليم المالك.'}, status=400)
         # --- بعد التحقق فقط، نفذ كل عمليات الحفظ ---
         contract.owner_return_done = True
         contract.owner_return_done_at = timezone.now()
@@ -534,6 +571,58 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             rental.breakdown.actual_dropoff_time = timezone.now()
             rental.breakdown.save()
         SelfDriveRentalStatusHistory.objects.create(rental=rental, old_status=old_status, new_status='Finished', changed_by=request.user)
+        # خصم عمولة المنصة من محفظة المالك إذا كانت الرحلة كاش
+        if payment.payment_method == 'cash':
+            owner = rental.car.owner
+            owner_wallet = Wallet.objects.get(user=owner)
+            platform_commission = getattr(rental.breakdown, 'platform_earnings', 0)
+            if platform_commission > 0:
+                owner_wallet.deduct_funds(Decimal(str(platform_commission)))
+                commission_type, _ = TransactionType.objects.get_or_create(name='Platform Commission', defaults={'is_credit': False})
+                WalletTransaction.objects.create(
+                    wallet=owner_wallet,
+                    transaction_type=commission_type,
+                    amount=Decimal(str(platform_commission)),
+                    balance_before=owner_wallet.balance + Decimal(str(platform_commission)),
+                    balance_after=owner_wallet.balance,
+                    status='completed',
+                    description=f'خصم عمولة المنصة لرحلة #{rental.id}',
+                    reference_id=str(rental.id),
+                    reference_type='selfdrive_rental'
+                )
+                if owner_wallet.balance < -1000:
+                    SelfDriveRentalLog.objects.create(
+                        rental=rental,
+                        action='trip_finished',
+                        user=owner,
+                        details='تحذير: رصيد محفظة المالك أقل من -1000. يجب الشحن لاستقبال حجوزات جديدة.'
+                    )
+        # إضافة أرباح السائق إلى محفظة المالك إذا كانت الرحلة إلكترونية
+        elif payment.payment_method in ['visa', 'wallet']:
+            owner = rental.car.owner
+            owner_wallet = Wallet.objects.get(user=owner)
+            driver_earnings = getattr(rental.breakdown, 'driver_earnings', 0)
+            if driver_earnings > 0:
+                owner_wallet.add_funds(Decimal(str(driver_earnings)))
+                earnings_type, _ = TransactionType.objects.get_or_create(name='Driver Earnings', defaults={'is_credit': True})
+                WalletTransaction.objects.create(
+                    wallet=owner_wallet,
+                    transaction_type=earnings_type,
+                    amount=Decimal(str(driver_earnings)),
+                    balance_before=owner_wallet.balance - Decimal(str(driver_earnings)),
+                    balance_after=owner_wallet.balance,
+                    status='completed',
+                    description=f'إضافة أرباح السائق لرحلة #{rental.id}',
+                    reference_id=str(rental.id),
+                    reference_type='selfdrive_rental'
+                )
+                if owner_wallet.balance < -1000:
+                    SelfDriveRentalLog.objects.create(
+                        rental=rental,
+                        action='trip_finished',
+                        user=owner,
+                        details='تحذير: رصيد محفظة المالك أقل من -1000. يجب الشحن لاستقبال حجوزات جديدة.'
+                    )
         # Build excess details and payment info
         breakdown = getattr(rental, 'breakdown', None)
         excess_details = None
@@ -612,9 +701,26 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             return Response({'error_code': 'INVALID_DATA', 'error_message': str(e)}, status=400)
         # إذا كان هناك زيادة يجب دفعها إلكترونيًا
         if payment.excess_amount > 0 and payment.payment_method in ['visa', 'wallet'] and payment.excess_paid_status != 'Paid':
-            success, result = fake_payment(payment, request.user, payment_type='excess')
-            if not success:
-                return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': result}, status=400)
+            from payments.services.payment_gateway import simulate_payment_gateway
+            payment_response = simulate_payment_gateway(
+                amount=payment.excess_amount,
+                payment_method=payment.payment_method,
+                user=request.user
+            )
+            if payment_response.success:
+                payment.excess_paid_status = 'Paid'
+                payment.excess_paid_at = timezone.now()
+                payment.excess_transaction_id = payment_response.transaction_id
+                payment.save()
+                from .models import SelfDriveRentalLog
+                SelfDriveRentalLog.objects.create(
+                    rental=payment.rental,
+                    action='payment',
+                    user=request.user,
+                    details=f'Excess payment: {payment_response.transaction_id}'
+                )
+            else:
+                return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
         contract.renter_return_done = True
         contract.renter_return_done_at = actual_dropoff_time
         contract.save()
@@ -671,10 +777,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             if payment.remaining_paid_status != 'Paid':
                 return Response({'error_code': 'REMAINING_NOT_PAID', 'error_message': 'يجب دفع باقي المبلغ إلكترونياً قبل إنهاء تسليم المالك.'}, status=400)
             if payment.excess_amount > 0 and payment.excess_paid_status != 'Paid':
-                # دفع الزيادة تلقائياً
-                success, result = fake_payment(payment, request.user, payment_type='excess')
-                if not success:
-                    return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': result}, status=400)
+                return Response({'error_code': 'EXCESS_NOT_PAID', 'error_message': 'يجب دفع الزيادة إلكترونيًا قبل إنهاء تسليم المالك.'}, status=400)
         # --- بعد التحقق فقط، نفذ كل عمليات الحفظ ---
         contract.owner_return_done = True
         contract.owner_return_done_at = timezone.now()
@@ -687,6 +790,58 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             rental.breakdown.actual_dropoff_time = timezone.now()
             rental.breakdown.save()
         SelfDriveRentalStatusHistory.objects.create(rental=rental, old_status=old_status, new_status='Finished', changed_by=request.user)
+        # خصم عمولة المنصة من محفظة المالك إذا كانت الرحلة كاش
+        if payment.payment_method == 'cash':
+            owner = rental.car.owner
+            owner_wallet = Wallet.objects.get(user=owner)
+            platform_commission = getattr(rental.breakdown, 'platform_earnings', 0)
+            if platform_commission > 0:
+                owner_wallet.deduct_funds(Decimal(str(platform_commission)))
+                commission_type, _ = TransactionType.objects.get_or_create(name='Platform Commission', defaults={'is_credit': False})
+                WalletTransaction.objects.create(
+                    wallet=owner_wallet,
+                    transaction_type=commission_type,
+                    amount=Decimal(str(platform_commission)),
+                    balance_before=owner_wallet.balance + Decimal(str(platform_commission)),
+                    balance_after=owner_wallet.balance,
+                    status='completed',
+                    description=f'خصم عمولة المنصة لرحلة #{rental.id}',
+                    reference_id=str(rental.id),
+                    reference_type='selfdrive_rental'
+                )
+                if owner_wallet.balance < -1000:
+                    SelfDriveRentalLog.objects.create(
+                        rental=rental,
+                        action='trip_finished',
+                        user=owner,
+                        details='تحذير: رصيد محفظة المالك أقل من -1000. يجب الشحن لاستقبال حجوزات جديدة.'
+                    )
+        # إضافة أرباح السائق إلى محفظة المالك إذا كانت الرحلة إلكترونية
+        elif payment.payment_method in ['visa', 'wallet']:
+            owner = rental.car.owner
+            owner_wallet = Wallet.objects.get(user=owner)
+            driver_earnings = getattr(rental.breakdown, 'driver_earnings', 0)
+            if driver_earnings > 0:
+                owner_wallet.add_funds(Decimal(str(driver_earnings)))
+                earnings_type, _ = TransactionType.objects.get_or_create(name='Driver Earnings', defaults={'is_credit': True})
+                WalletTransaction.objects.create(
+                    wallet=owner_wallet,
+                    transaction_type=earnings_type,
+                    amount=Decimal(str(driver_earnings)),
+                    balance_before=owner_wallet.balance - Decimal(str(driver_earnings)),
+                    balance_after=owner_wallet.balance,
+                    status='completed',
+                    description=f'إضافة أرباح السائق لرحلة #{rental.id}',
+                    reference_id=str(rental.id),
+                    reference_type='selfdrive_rental'
+                )
+                if owner_wallet.balance < -1000:
+                    SelfDriveRentalLog.objects.create(
+                        rental=rental,
+                        action='trip_finished',
+                        user=owner,
+                        details='تحذير: رصيد محفظة المالك أقل من -1000. يجب الشحن لاستقبال حجوزات جديدة.'
+                    )
         # Build excess details and payment info
         breakdown = getattr(rental, 'breakdown', None)
         excess_details = None
@@ -740,7 +895,32 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         # إذا كان الديبوزيت مدفوع يتم رده
         payment = rental.payment
         if payment.deposit_paid_status == 'Paid' and not payment.deposit_refunded:
-            fake_refund(payment, request.user)
+            from wallets.models import Wallet, WalletTransaction, TransactionType
+            renter = rental.renter
+            renter_wallet = Wallet.objects.get(user=renter)
+            deposit_amount = Decimal(str(payment.deposit_amount))
+            # أضف العربون للمحفظة
+            renter_wallet.add_funds(deposit_amount)
+            # سجل WalletTransaction
+            refund_type, _ = TransactionType.objects.get_or_create(name='Deposit Refund', defaults={'is_credit': True})
+            WalletTransaction.objects.create(
+                wallet=renter_wallet,
+                transaction_type=refund_type,
+                amount=deposit_amount,
+                balance_before=renter_wallet.balance - deposit_amount,
+                balance_after=renter_wallet.balance,
+                status='completed',
+                description=f'استرداد العربون لإلغاء رحلة #{rental.id} من المالك',
+                reference_id=str(rental.id),
+                reference_type='selfdrive_rental'
+            )
+            # حدث حالة الدفع
+            from django.utils import timezone
+            payment.deposit_refunded = True
+            payment.deposit_refunded_at = timezone.now()
+            payment.deposit_refund_transaction_id = f'REFUND-{rental.id}-{int(payment.deposit_refunded_at.timestamp())}'
+            payment.deposit_paid_status = 'Refunded'
+            payment.save()
         old_status = rental.status
         rental.status = 'Canceled'
         rental.save()

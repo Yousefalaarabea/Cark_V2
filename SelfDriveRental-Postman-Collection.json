@@ -1,145 +1,108 @@
 {
   "info": {
-    "_postman_id": "selfdrive-rental-collection-001",
-    "name": "SelfDriveRental API Tests",
+    "_postman_id": "cark-app-payments-collection-2024-06-01",
+    "name": "Cark App Payments API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:8000/api" },
-    { "key": "token", "value": "<YOUR_TOKEN_HERE>" }
-  ],
   "item": [
     {
-      "name": "1. Create Rental",
+      "name": "Add Visa Card",
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+          { "key": "Authorization", "value": "Bearer {{user_token}}", "type": "text" },
           { "key": "Content-Type", "value": "application/json", "type": "text" }
         ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", ""] },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"car\": 1,\n  \"start_date\": \"2025-07-01T10:00:00Z\",\n  \"end_date\": \"2025-07-03T10:00:00Z\",\n  \"pickup_address\": \"Cairo\",\n  \"dropoff_address\": \"Cairo\",\n  \"payment_method\": \"visa\"\n}"
-        }
-      }
-    },
-    {
-      "name": "2. Confirm By Owner",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/confirm_by_owner/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "confirm_by_owner", ""] }
-      }
-    },
-    {
-      "name": "3. Pay Deposit",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/deposit_paid/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "deposit_paid", ""] }
-      }
-    },
-    {
-      "name": "4. Owner Pickup Handover (مع تأكيد استلام الكاش لو الدفع نقدي)",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/owner_pickup_handover/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "owner_pickup_handover", ""] },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  // إذا كان الدفع نقدي أضف:\n  \"confirm_remaining_cash\": true\n}"
+          "raw": "{\n  \"token\": \"tok_123456789\",\n  \"card_brand\": \"Visa\",\n  \"card_last_four_digits\": \"1234\"\n}"
         },
-        "description": "إذا كان الدفع نقدي، أضف confirm_remaining_cash: true في body. إذا كان إلكتروني، body فارغ."
-      }
-    },
-    {
-      "name": "5. Renter Pickup Handover",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/renter_pickup_handover/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "renter_pickup_handover", ""] }
-      }
-    },
-    {
-      "name": "6. Start Trip",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/start_trip/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "start_trip", ""] }
-      }
-    },
-    {
-      "name": "7. Request Location",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/request_location/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "request_location", ""] },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"latitude\": 30.0444,\n  \"longitude\": 31.2357\n}"
+        "url": {
+          "raw": "{{base_url}}/payments/add-card/",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "add-card", ""]
         }
-      }
+      },
+      "response": []
     },
     {
-      "name": "8. Renter Dropoff Handover (End)",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/renter_dropoff_handover/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "renter_dropoff_handover", ""] }
-      }
-    },
-    {
-      "name": "9. Owner Dropoff Handover (مع تأكيد استلام الزيادة كاش لو فيه)",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-          { "key": "Content-Type", "value": "application/json", "type": "text" }
-        ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/owner_dropoff_handover/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "owner_dropoff_handover", ""] },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  // إذا كان هناك زيادة كاش أضف:\n  \"confirm_excess_cash\": true\n}"
-        },
-        "description": "إذا كان هناك زيادة كاش، أضف confirm_excess_cash: true في body. إذا لم يكن هناك زيادة أو الدفع إلكتروني، body فارغ."
-      }
-    },
-    {
-      "name": "10. View Summary",
+      "name": "List Payment Methods",
       "request": {
         "method": "GET",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+          { "key": "Authorization", "value": "Bearer {{user_token}}", "type": "text" }
         ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/summary/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "summary", ""] }
-      }
+        "url": {
+          "raw": "{{base_url}}/payments/payment-methods/",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "payment-methods", ""]
+        }
+      },
+      "response": []
     },
     {
-      "name": "11. Cancel Rental",
+      "name": "Pay with Card",
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+          { "key": "Authorization", "value": "Bearer {{user_token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
         ],
-        "url": { "raw": "{{base_url}}/selfdrive-rentals/1/cancel_rental/", "host": ["{{base_url}}"], "path": ["selfdrive-rentals", "1", "cancel_rental", ""] }
-      }
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": \"100.00\",\n  \"payment_method_type\": \"card\",\n  \"payment_method_id\": \"{{card_id}}\",\n  \"payment_for\": \"deposit\",\n  \"rental_type\": \"rental\",\n  \"rental_id\": \"{{rental_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payments/pay/",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "pay", ""]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Pay with Wallet",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{user_token}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": \"50.00\",\n  \"payment_method_type\": \"wallet\",\n  \"payment_method_id\": \"{{wallet_id}}\",\n  \"payment_for\": \"deposit\",\n  \"rental_type\": \"selfdrive\",\n  \"rental_id\": \"{{selfdrive_rental_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/payments/pay/",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "pay", ""]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Admin: List All Payment Transactions",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_token}}", "type": "text" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/payments/admin/transactions/",
+          "host": ["{{base_url}}"],
+          "path": ["payments", "admin", "transactions", ""]
+        }
+      },
+      "response": []
     }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "user_token", "value": "" },
+    { "key": "admin_token", "value": "" },
+    { "key": "card_id", "value": "" },
+    { "key": "wallet_id", "value": "" },
+    { "key": "rental_id", "value": "" },
+    { "key": "selfdrive_rental_id", "value": "" }
   ]
 } 

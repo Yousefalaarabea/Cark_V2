@@ -70,6 +70,8 @@ INSTALLED_APPS = [
     'documents.apps.DocumentsConfig',
     'rentals',
     'selfdrive_rentals',
+    'payments',
+    'wallets',
 ]
 
 
