@@ -62,6 +62,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        required_fields = ['email', 'phone_number', 'first_name', 'last_name', 'national_id', 'password']
+        for field in required_fields:
+            if field not in validated_data:
+                raise serializers.ValidationError({field: f"{field.replace('_', ' ').capitalize()} is required."})
         user = User.objects.create_user(
             email=validated_data['email'],
             phone_number=validated_data['phone_number'],
