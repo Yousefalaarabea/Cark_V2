@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.13'
 
       - name: Create and start virtual environment
         run: |
@@ -48,8 +48,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    
-    
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -60,10 +62,17 @@ jobs:
         run: unzip release.zip
 
       
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8E1310DB32EF4F0FAF1D98FFD385AF2D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_08469100ED2E43D09696CFDC3C054F95 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0AD618FF7CE54E37B8FACC62367CC65C }}
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'Cark'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AF276D1ACAEE4A53BC3CF16CDB7B85EF }}
+          
