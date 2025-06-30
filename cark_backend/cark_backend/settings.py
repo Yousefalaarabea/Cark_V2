@@ -26,14 +26,13 @@ if os.path.exists(os.path.join(BASE_DIR, '.env')):
     environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # لو عايز تتحكم في صلاحية الـ refresh كمان
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=36500),  # 100 سنة
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=36500),  # 100 سنة
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
-
-
 
 
 #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -77,6 +76,9 @@ INSTALLED_APPS = [
     'cars',
     'documents.apps.DocumentsConfig',
     'rentals',
+    'selfdrive_rentals',
+    'payments',
+    'wallets',
 ]
 
 
@@ -210,5 +212,18 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+
+PAYMOB_API_KEY = "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBMU5EZzFOeXdpYm1GdFpTSTZJbWx1YVhScFlXd2lmUS5mYlNUNHN1TV8yTXhJRTBHek9RTkktVGs1NWF4djd0cmJYQlJRUDFyc2dNSWh6bzJMYnpNdlBacnB4NzRqa2xkcExEQTFHU1hyUklFVkc2OWJjNDFGUQ=="
+PAYMOB_BASE_URL = "https://accept.paymob.com/api"
+#PAYMOB_INTENTION_BASE_URL = "https://flashapi.paymob.com"
+# PAYMOB_INTEGRATION_ID_WALLET = "5165985"
+PAYMOB_INTEGRATION_ID_CARD = "5149124"
+PAYMOB_IFRAME_ID = "933671"
+PAYMOB_HMAC_SECRET = "BCA25D42BBFBC1AD1A09AEFF78FDECE0"
+PAYMOB_INTEGRATION_ID_MOTO = "5168455"
+
+PAYMOB_REDIRECT_URL = "https://accept.paymobsolutions.com/api/acceptance/post_pay"
 
 #STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
