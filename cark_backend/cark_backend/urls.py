@@ -12,7 +12,9 @@ urlpatterns = [
     path('api/', include('cars.urls')),  # إضافة رابط الـ API للسيارات
     path('api/', include('documents.urls')),  # إضافة رابط الـ API للمستندات
     path('api/', include('rentals.urls')),  # إضافة رابط الـ API للايجارات
-    
+    path('api/', include('selfdrive_rentals.urls')),  # إضافة رابط الـ API للايجار بدون سائق
+    path('api/payments/', include('payments.urls')),  # إضافة رابط الـ API للمدفوعات
+    path('api/wallets/', include('wallets.urls')),  # إضافة رابط الـ API للمحفظة
 ]
 
  #أثناء التطوير فقط: السماح لخادم Django أن يخدم ملفات الميديا
