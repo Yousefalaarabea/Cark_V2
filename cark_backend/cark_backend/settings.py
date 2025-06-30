@@ -48,7 +48,11 @@ SECRET_KEY = 'django-insecure-wdrw4evzj4_z)fr2^r&ec6dewdiql&&%94e6%szhl*_m4^24+q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "across-pmid-hwy-able.trycloudflare.com",
+    "127.0.0.1",
+]
 
 
 # Application definition
@@ -168,3 +172,14 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+
+PAYMOB_API_KEY = "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBMU5EZzFOeXdpYm1GdFpTSTZJbWx1YVhScFlXd2lmUS5mYlNUNHN1TV8yTXhJRTBHek9RTkktVGs1NWF4djd0cmJYQlJRUDFyc2dNSWh6bzJMYnpNdlBacnB4NzRqa2xkcExEQTFHU1hyUklFVkc2OWJjNDFGUQ=="
+PAYMOB_BASE_URL = "https://accept.paymob.com/api"
+#PAYMOB_INTENTION_BASE_URL = "https://flashapi.paymob.com"
+# PAYMOB_INTEGRATION_ID_WALLET = "5165985"
+PAYMOB_INTEGRATION_ID_CARD = "5149124"
+PAYMOB_IFRAME_ID = "933671"
+PAYMOB_HMAC_SECRET = "BCA25D42BBFBC1AD1A09AEFF78FDECE0"
+PAYMOB_INTEGRATION_ID_MOTO = "5168455"
+
+PAYMOB_REDIRECT_URL = "https://accept.paymobsolutions.com/api/acceptance/post_pay"

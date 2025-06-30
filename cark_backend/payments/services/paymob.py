@@ -42,12 +42,6 @@ def get_payment_token(auth_token, order_id, amount_cents, billing_data, integrat
         "billing_data": billing_data
     }
 
-    if saved_card_token:
-        payload["source"] = {
-            "identifier": saved_card_token,
-            "subtype": "TOKEN"
-        }
-        print(f"DEBUG: Using saved card token. Source: {payload['source']}")
 
     print(f"DEBUG: Full payload to payment_keys: {json.dumps(payload, indent=4)}")
 
@@ -62,7 +56,7 @@ def get_payment_token(auth_token, order_id, amount_cents, billing_data, integrat
         raise
 
 def charge_saved_card(saved_card_token,payment_token):
-    url = f"{settings.PAYMOB_BASE_URL}/acceptance/post_pay"
+    url = f"https://accept.paymob.com/api/acceptance/payments/pay"
     payload = {
         "source": {"identifier": saved_card_token, "subtype": "TOKEN"},
         "payment_token": payment_token

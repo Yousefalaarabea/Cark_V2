@@ -170,4 +170,14 @@ class WithdrawAllToMobileWalletSerializer(serializers.Serializer):
         return data
 
 class WalletPhoneNumberSerializer(serializers.Serializer):
-    phone_wallet_number = serializers.CharField(max_length=20) 
+    phone_wallet_number = serializers.CharField(max_length=20)
+
+    def validate_phone_wallet_number(self, value):
+        user = self.context.get('request').user if self.context.get('request') else None
+        from .models import Wallet
+        qs = Wallet.objects.filter(phone_wallet_number=value)
+        if user:
+            qs = qs.exclude(user=user)
+        if qs.exists():
+            raise serializers.ValidationError("This wallet number is already in use.")
+        return value 

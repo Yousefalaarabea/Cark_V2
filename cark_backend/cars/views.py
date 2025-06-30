@@ -9,6 +9,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import models
+from rest_framework.views import APIView
 
 class CarViewSet(viewsets.ModelViewSet):
     queryset = Car.objects.all()
@@ -247,3 +248,10 @@ class CarStatsViewSet(viewsets.ModelViewSet):
             'total_rentals': total_rentals['total'] or 0,
             'total_earned': total_earned['total'] or 0
         })
+
+class MyCarsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        cars = Car.objects.filter(owner=request.user)
+        serializer = CarSerializer(cars, many=True)
+        return Response(serializer.data)
