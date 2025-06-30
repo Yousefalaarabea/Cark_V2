@@ -1,7 +1,10 @@
 from rest_framework import serializers
-from .models import Rental, RentalPayment, RentalUsage, PlannedTrip, PlannedTripStop, RentalBreakdown
+from .models import Rental, RentalPayment, PlannedTrip, PlannedTripStop, RentalBreakdown
 from cars.models import Car, CarRentalOptions, CarUsagePolicy
 from users.models import User
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .services import dummy_charge_visa
 
 # Serializer لعرض بيانات المستخدم
 class UserSerializer(serializers.ModelSerializer):
@@ -42,17 +45,17 @@ class PlannedTripSerializer(serializers.ModelSerializer):
         model = PlannedTrip
         fields = ['id', 'route_polyline', 'stops']
 
-# Serializer لبيانات الاستخدام
-class RentalUsageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RentalUsage
-        fields = ['start_odometer', 'end_odometer', 'total_distance_used', 'start_time', 'end_time', 'actual_return_time', 'extra_km', 'extra_km_charges', 'extra_hours', 'extra_hour_charges', 'total_waiting_minutes', 'extra_waiting_minutes', 'waiting_time_cost', 'pickup_confirmed_by_owner', 'pickup_confirmed_by_renter', 'dropoff_confirmed_by_owner', 'dropoff_confirmed_by_renter']
-
 # Serializer لبيانات الدفع
 class RentalPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = RentalPayment
-        fields = ['deposit_amount', 'deposit_paid_status', 'deposit_paid_at', 'insurance_amount', 'insurance_paid_status', 'insurance_paid_at', 'rental_paid_status', 'rental_paid_at', 'payment_method', 'refundable_buffer']
+        fields = [
+            'deposit_amount', 'deposit_paid_status', 'deposit_paid_at', 'deposit_transaction_id',
+            'deposit_refunded_status', 'deposit_refunded_at', 'deposit_refund_transaction_id',
+            'remaining_amount', 'remaining_paid_status', 'remaining_paid_at', 'remaining_transaction_id',
+            'limits_excess_insurance_amount', 'limits_refunded_status', 'limits_refunded_at', 'limits_refund_transaction_id',
+            'payment_method', 'rental_total_amount'
+        ]
 
 # Serializer لتفاصيل breakdown
 class RentalBreakdownSerializer(serializers.ModelSerializer):
@@ -60,7 +63,7 @@ class RentalBreakdownSerializer(serializers.ModelSerializer):
         model = RentalBreakdown
         fields = [
             'planned_km', 'total_waiting_minutes', 'daily_price', 'extra_km_cost', 'waiting_cost',
-            'total_cost', 'buffer_amount', 'deposit', 'platform_fee', 'driver_earnings',
+            'total_cost', 'deposit', 'platform_fee', 'driver_earnings',
             'allowed_km', 'extra_km', 'base_cost', 'final_cost', 'commission_rate',
             'created_at', 'updated_at'
         ]
@@ -70,16 +73,15 @@ class RentalSerializer(serializers.ModelSerializer):
     renter = UserSerializer(read_only=True)
     car = CarSerializer(read_only=True)
     planned_trip = PlannedTripSerializer(read_only=True)
-    usage_info = RentalUsageSerializer(read_only=True)
     payment_info = RentalPaymentSerializer(read_only=True)
     breakdown = RentalBreakdownSerializer(read_only=True)
     class Meta:
         model = Rental
         fields = [
-            'id', 'renter', 'car', 'start_date', 'end_date', 'status', 'negotiation_status',
-            'rental_type', 'pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng', 'pickup_address', 'dropoff_address',
-            'payment_method', 'insurance_buffer', 'deposit', 'platform_commission', 'driver_earnings', 'contract_type', 'contract_signed',
-            'created_at', 'updated_at', 'planned_trip', 'usage_info', 'payment_info', 'breakdown'
+            'id', 'renter', 'car', 'start_date', 'end_date', 'status',
+            'rental_type',
+            'pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng', 'pickup_address', 'dropoff_address',
+            'payment_method', 'created_at', 'updated_at', 'planned_trip', 'payment_info', 'breakdown'
         ]
 
 # Serializer لإنشاء/تحديث الحجز مع المحطات
@@ -122,3 +124,31 @@ class RentalCreateUpdateSerializer(serializers.ModelSerializer):
             for stop in stops_data:
                 PlannedTripStop.objects.create(planned_trip=planned_trip, **stop)
         return instance
+
+@action(detail=True, methods=['post'])
+def confirm_booking(self, request, pk=None):
+    rental = self.get_object()
+    if rental.status != 'Pending':
+        return Response({'error': 'Cannot confirm booking unless status is Pending.'}, status=400)
+    contract_type = request.data.get('contract_type')
+    if contract_type:
+        rental.contract_type = contract_type
+    rental.status = 'Confirmed'
+    rental.save()
+
+    # --- هنا منطق الدفع الوهمي ---
+    # جلب قيمة العربون من breakdown
+    if hasattr(rental, 'breakdown'):
+        deposit_amount = rental.breakdown.deposit
+        # نفذ الدفع فقط لو طريقة الدفع visa
+        if rental.payment_method == 'visa':
+            success = dummy_charge_visa(rental.renter, deposit_amount)
+            if success:
+                # حدث حالة الدفع في RentalPayment أو سجل العملية
+                payment, _ = RentalPayment.objects.get_or_create(rental=rental)
+                payment.deposit_amount = deposit_amount
+                payment.deposit_paid_status = 'Paid'
+                payment.save()
+    # --- نهاية منطق الدفع ---
+
+    return Response({'status': 'Booking confirmed.', 'contract_type': rental.contract_type})
