@@ -50,7 +50,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "across-pmid-hwy-able.trycloudflare.com",
+    "supplement-women-puts-systems.trycloudflare.com",
     "127.0.0.1",
 ]
 

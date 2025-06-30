@@ -22,6 +22,7 @@ from .services.payment_gateway import simulate_payment_gateway
 from rentals.models import Rental, RentalPayment
 from selfdrive_rentals.models import SelfDriveRental, SelfDrivePayment
 from django.utils import timezone
+from decimal import Decimal
 
 User = get_user_model()
 
@@ -45,13 +46,6 @@ class StartPaymentView(APIView):
             amount_cents = int(amount_cents)
         except ValueError:
             return Response({"error": "Invalid 'amount_cents' value."}, status=400)
-
-        # تحقق من الرصيد السالب لو الغرض شحن المحفظة
-        if purpose == "wallet_recharge":
-            wallet = Wallet.objects.get(user=request.user)
-            amount_egp = int(amount_cents) / 100
-            if wallet.balance < 0 and amount_egp < abs(wallet.balance):
-                return Response({"error": "Amount must be greater than or equal to your negative wallet balance."}, status=400)
 
         reference = str(uuid.uuid4())
         user_id = str(request.user.id)
@@ -351,28 +345,6 @@ def paymob_webhook(request):
             else:
                 print(f"🔄 Updated existing transaction entry for {merchant_order_id}.")
 
-            # لو الغرض شحن المحفظة وتم الدفع بنجاح، زود الرصيد
-            if purpose == "wallet_recharge" and transaction_data.get("success", False):
-                wallet = Wallet.objects.get(user=user_obj)
-                amount_egp = int(transaction_data.get("amount_cents", 0)) / 100
-                balance_before = wallet.balance
-                wallet.balance += amount_egp
-                wallet.save()
-                print(f"✅ Wallet recharged for user {user_obj.id} by {amount_egp} EGP.")
-                # إضافة سجل في WalletTransaction
-                transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
-                WalletTransaction.objects.create(
-                    wallet=wallet,
-                    transaction_type=transaction_type,
-                    amount=amount_egp,
-                    balance_before=balance_before,
-                    balance_after=wallet.balance,
-                    status='completed',
-                    description='شحن المحفظة عن طريق Paymob (مباشر)',
-                    reference_id=transaction_obj.id,
-                    reference_type='payment'
-                )
-
         except Exception as e:
             print(f"❌ Error saving/updating transaction in DB from webhook: {e}")
             return Response({"error": "Internal server error during transaction update."}, status=500)
@@ -394,6 +366,28 @@ def paymob_webhook(request):
             "card_type": source_data.get("type"),
             "card_pan": source_data.get("pan"),
         }
+
+        # لو الغرض شحن المحفظة وتم الدفع بنجاح، زود الرصيد
+        if merchant_order_id.startswith("wallet_recharge") and transaction_data.get("success", False):
+            wallet = Wallet.objects.get(user=user_obj)
+            amount_egp = Decimal(str(transaction_data.get("amount_cents", 0))) / Decimal('100')
+            balance_before = wallet.balance
+            wallet.balance += amount_egp
+            wallet.save()
+            print(f"✅ Wallet recharged for user {user_obj.id} by {amount_egp} EGP.")
+            # إضافة سجل في WalletTransaction
+            transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
+            WalletTransaction.objects.create(
+                wallet=wallet,
+                transaction_type=transaction_type,
+                amount=amount_egp,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                status='completed',
+                description='شحن المحفظة عن طريق Paymob',
+                reference_id=transaction_obj.id,
+                reference_type='payment'
+            )
 
     else:
         print(f"Ignored webhook type: {webhook_type}.")
@@ -612,5 +606,33 @@ class ChargeSavedCardView(APIView):
             })
         except Exception as e:
             return Response({"success": False, "error": str(e)}, status=500)
+
+class WalletRechargeView(StartPaymentView):
+    """
+    API لشحن المحفظة باستخدام نفس منطق StartPaymentView مع إضافة منطق شحن المحفظة بعد نجاح الدفع.
+    """
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        # لو الدفع نجح (success=True) وresponse فيه order_id وamount_cents
+        # تم تعليق منطق شحن المحفظة هنا لتفادي تكرار الشحن، حيث يتم الشحن فعليًا في الـ webhook فقط
+        # if response.status_code == 200 and response.data.get("success"):
+        #     amount_cents = int(request.data.get("amount_cents"))
+        #     amount_egp = Decimal(str(amount_cents)) / Decimal('100')
+        #     wallet = Wallet.objects.get(user=request.user)
+        #     balance_before = wallet.balance
+        #     wallet.balance += amount_egp
+        #     wallet.save()
+        #     transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
+        #     WalletTransaction.objects.create(
+        #         wallet=wallet,
+        #         transaction_type=transaction_type,
+        #         amount=amount_egp,
+        #         balance_before=balance_before,
+        #         balance_after=wallet.balance,
+        #         status='completed',
+        #         description='شحن المحفظة عن طريق Paymob (مباشر)',
+        #         reference_type='payment'
+        #     )
+        return response
 
 

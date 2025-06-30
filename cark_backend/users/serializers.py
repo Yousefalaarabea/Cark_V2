@@ -39,17 +39,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate_first_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("First name must contain letters only.")
-        if len(value) < 2:
-            raise serializers.ValidationError("First name must be at least 2 characters long.")
+        if not re.match(r'^[A-Za-z\u0600-\u06FF ]+$', value):
+            raise serializers.ValidationError("First name must contain letters and spaces only.")
+        if len(value.replace(' ', '')) < 2:
+            raise serializers.ValidationError("First name must be at least 2 letters (excluding spaces).")
         return value
 
     def validate_last_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("Last name must contain letters only.")
-        if len(value) < 2:
-            raise serializers.ValidationError("Last name must be at least 2 characters long.")
+        if not re.match(r'^[A-Za-z\u0600-\u06FF ]+$', value):
+            raise serializers.ValidationError("Last name must contain letters and spaces only.")
+        if len(value.replace(' ', '')) < 2:
+            raise serializers.ValidationError("Last name must be at least 2 letters (excluding spaces).")
         return value
 
     def validate_password(self, value):
