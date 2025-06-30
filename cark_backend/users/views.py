@@ -25,6 +25,10 @@ class UserRoleViewSet(viewsets.ModelViewSet):
     queryset = UserRole.objects.all()
     serializer_class = UserRoleSerializer
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    permission_classes = [permissions.IsAdminUser]
 
 class AssignRolesAPIView(APIView):
     def post(self, request):
@@ -79,9 +83,3 @@ class UserRolesAPIView(APIView):
             "email": user.email,
             "roles": roles
         }, status=status.HTTP_200_OK)
-
-
-class UserListView(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer  # لازم يكون Serializer بيرجع بيانات المستخدم
-    permission_classes = [permissions.IsAuthenticated]  # أو AllowAny لو مش عايز تحقق
