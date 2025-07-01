@@ -18,6 +18,11 @@ from datetime import timedelta
 from payments.services.payment_gateway import simulate_payment_gateway
 from wallets.models import Wallet, WalletTransaction, TransactionType
 from decimal import Decimal
+from payments.services import paymob
+from payments.models import SavedCard
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 class SelfDriveRentalViewSet(viewsets.ModelViewSet):
     queryset = SelfDriveRental.objects.all()
@@ -286,60 +291,57 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         if check_deposit_expiry(rental):
             return Response({'error_code': 'DEPOSIT_EXPIRED', 'error_message': 'انتهت مهلة دفع الديبوزيت، تم إلغاء الحجز.'}, status=400)
         payment = rental.payment
+        # --- منع دفع الديبوزيت مرتين ---
+        if payment and payment.deposit_paid_status == 'Paid':
+            return Response({'error_code': 'ALREADY_PAID', 'error_message': 'تم دفع العربون بالفعل ولا يمكن دفعه مرة أخرى.'}, status=400)
         payment_type = request.data.get('type', 'deposit')  # deposit/remaining/excess
-        transaction_id = request.data.get('transaction_id', 'SIMULATED')
         now = timezone.now()
         contract = rental.contract
-        if payment_type == 'deposit':
-            if payment.deposit_paid_status == 'Paid':
-                return Response({'error_code': 'DEPOSIT_ALREADY_PAID', 'error_message': 'تم دفع الديبوزيت بالفعل ولا يمكن دفعه مرة أخرى.'}, status=400)
-            payment.deposit_paid_status = 'Paid'
-            payment.deposit_paid_at = now
-            payment.deposit_transaction_id = transaction_id
-        elif payment_type == 'remaining':
-            if payment.remaining_paid_status in ['Paid', 'Confirmed']:
-                return Response({'error_code': 'REMAINING_ALREADY_PAID', 'error_message': 'تم دفع أو تأكيد باقي المبلغ بالفعل.'}, status=400)
-            if payment.payment_method in ['visa', 'wallet']:
-                has_start_odometer = rental.odometer_images.filter(type='start').exists()
-                if not (contract.renter_signed and contract.owner_signed and has_start_odometer and contract.owner_contract_image):
-                    return Response({'error_code': 'HANDOVER_NOT_COMPLETE', 'error_message': 'لا يمكن دفع باقي المبلغ إلا بعد تسليم المستأجر والمالك وتوقيع العقد ورفع صورة العداد.'}, status=400)
-                payment.remaining_paid_status = 'Paid'
-                payment.remaining_paid_at = now
-                payment.remaining_transaction_id = transaction_id
-            else:
-                return Response({'error_code': 'CASH_CONFIRM_REQUIRED', 'error_message': 'تأكيد استلام باقي المبلغ كاش يتم فقط من خلال المالك في خطوة تسليم المالك.'}, status=400)
-        elif payment_type == 'excess':
-            if payment.excess_paid_status == 'Paid':
-                return Response({'error_code': 'EXCESS_ALREADY_PAID', 'error_message': 'تم دفع الزيادة بالفعل.'}, status=400)
-            payment.excess_paid_status = 'Paid'
-            payment.excess_paid_at = now
-            payment.excess_transaction_id = transaction_id
-            # Log excess payment
-            SelfDriveRentalLog.objects.create(rental=rental, action='excess_payment', user=request.user, details=f'Excess paid: {payment.excess_amount}, transaction_id: {transaction_id}')
-        else:
-            return Response({'error_code': 'INVALID_TYPE', 'error_message': 'نوع الدفع غير مدعوم.'}, status=400)
-        payment.save()
-        from .serializers import SelfDrivePaymentSerializer
-        # Build excess details for response
-        breakdown = getattr(rental, 'breakdown', None)
-        excess_details = None
-        if breakdown:
-            excess_details = {
-                'excess_amount': breakdown.extra_km_fee + breakdown.late_fee,
-                'extra_km_fee': breakdown.extra_km_fee,
-                'late_fee': breakdown.late_fee,
-                'extra_km': breakdown.extra_km,
-                'extra_km_cost': breakdown.extra_km_cost,
-                'late_days': breakdown.late_days,
-                'late_fee_per_day': breakdown.daily_price,
-                'late_fee_service_percent': 30,
-            }
-        return Response({
-            'status': f'{payment_type} payment processed successfully.',
-            'transaction_id': transaction_id,
-            'payment': SelfDrivePaymentSerializer(payment).data,
-            'excess_details': excess_details
-        })
+
+        # --- الدفع بالكارت المحفوظ عبر Paymob ---
+        payment_method = request.data.get('payment_method')
+        saved_card_id = request.data.get('saved_card_id')
+        amount_cents = request.data.get('amount_cents')
+        if payment_method == 'saved_card' and saved_card_id and amount_cents and payment_type == 'deposit':
+            try:
+                # --- VALIDATION ---
+                from payments.models import SavedCard
+                from payments.services.payment_gateway import pay_with_saved_card_gateway
+                # 1. تأكد أن المستخدم هو المستأجر
+                if rental.renter != request.user:
+                    return Response({'error_code': 'NOT_RENTER', 'error_message': 'يجب أن تكون المستأجر في هذا الحجز.'}, status=403)
+                # 2. تأكد من وجود الكارت وأنه ملك للمستخدم
+                try:
+                    card = SavedCard.objects.get(id=saved_card_id, user=request.user)
+                except SavedCard.DoesNotExist:
+                    return Response({'error_code': 'CARD_NOT_FOUND', 'error_message': 'الكارت غير موجود أو لا يخصك.'}, status=404)
+                # 3. تأكد من وجود بيانات الدفع
+                if not payment or not hasattr(payment, 'deposit_amount'):
+                    return Response({'error_code': 'PAYMENT_NOT_FOUND', 'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'}, status=400)
+                # 4. تأكد أن مبلغ الديبوزيت هو المطلوب بالضبط
+                required_cents = int(round(float(payment.deposit_amount) * 100))
+                if int(amount_cents) != required_cents:
+                    return Response({'error_code': 'INVALID_AMOUNT', 'error_message': f'المبلغ المطلوب للعربون هو {required_cents} قرش.'}, status=400)
+                # --- END VALIDATION ---
+                result = pay_with_saved_card_gateway(int(amount_cents), request.user, card.token)
+                if not result['success']:
+                    return Response({'error_code': 'PAYMENT_FAILED', 'error_message': result['message'], 'details': result.get('charge_response')}, status=400)
+                payment.deposit_paid_status = 'Paid'
+                payment.deposit_paid_at = now
+                payment.deposit_transaction_id = result['transaction_id']
+                payment.payment_method = 'visa'
+                payment.save()
+                from .serializers import SelfDrivePaymentSerializer
+                return Response({
+                    'status': 'deposit payment processed successfully.',
+                    'transaction_id': result['transaction_id'],
+                    'payment': SelfDrivePaymentSerializer(payment).data,
+                    'paymob_details': result
+                })
+            except Exception as e:
+                return Response({'error_code': 'PAYMENT_ERROR', 'error_message': str(e)}, status=500)
+
+        # ... باقي الكود القديم ...
 
     @action(detail=True, methods=['post'])
     def receive_live_location(self, request, pk=None):
@@ -473,27 +475,36 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         if payment.payment_method in ['visa', 'wallet']:
             if confirm_remaining_cash is not None:
                 return Response({'error_code': 'CASH_NOT_ALLOWED', 'error_message': 'الدفع إلكتروني ولا يمكن تأكيد استلام كاش.'}, status=400)
-            if payment.remaining_paid_status != 'Paid':
-                from payments.services.payment_gateway import simulate_payment_gateway
-                payment_response = simulate_payment_gateway(
-                    amount=payment.remaining_amount,
-                    payment_method=payment.payment_method,
-                    user=request.user
-                )
-                if payment_response.success:
-                    payment.remaining_paid_status = 'Paid'
-                    payment.remaining_paid_at = timezone.now()
-                    payment.remaining_transaction_id = payment_response.transaction_id
-                    payment.save()
-                    from .models import SelfDriveRentalLog
-                    SelfDriveRentalLog.objects.create(
-                        rental=payment.rental,
-                        action='payment',
-                        user=request.user,
-                        details=f'Remaining payment: {payment_response.transaction_id}'
-                    )
-                else:
-                    return Response({'error_code': 'PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
+        if payment.payment_method == 'visa':
+            # دفع فعلي بالكارت المحفوظ المختار
+            selected_card = getattr(rental, 'selected_card', None)
+            if not selected_card:
+                return Response({'error_code': 'NO_SELECTED_CARD', 'error_message': 'لم يتم اختيار كارت فيزا لهذا الحجز.'}, status=400)
+            if selected_card.user != request.user:
+                return Response({'error_code': 'CARD_NOT_OWNED', 'error_message': 'الكارت المختار لا يخصك.'}, status=403)
+            from payments.services.payment_gateway import pay_with_saved_card_gateway
+            amount_cents = int(round(float(payment.remaining_amount) * 100))
+            result = pay_with_saved_card_gateway(amount_cents, request.user, selected_card.token)
+            # سجل كل تفاصيل الدفع
+            payment.remaining_paid_status = 'Paid' if result['success'] else 'Pending'
+            payment.remaining_paid_at = timezone.now() if result['success'] else None
+            payment.remaining_transaction_id = result['transaction_id']
+            payment.save()
+            from .models import SelfDriveRentalLog
+            SelfDriveRentalLog.objects.create(
+                rental=payment.rental,
+                action='payment',
+                user=request.user,
+                details=f'Remaining payment: {result}'
+            )
+            if not result['success']:
+                return Response({'error_code': 'PAYMENT_FAILED', 'error_message': result['message'], 'paymob_details': result}, status=400)
+            paymob_details = result
+        else:
+            paymob_details = None
+            if payment.payment_method == 'wallet':
+                # ... الكود القديم لو محفظة ...
+                pass
         # لو كاش لا يتم أي تحديث هنا
         # نفذ هاند أوفر المستأجر
         contract.renter_pickup_done = True
@@ -505,7 +516,8 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             'renter_signed': contract.renter_signed,
             'car_image': car_image.name,
             'odometer_image': odometer_image.name,
-            'remaining_paid_status': payment.remaining_paid_status
+            'remaining_paid_status': payment.remaining_paid_status,
+            'paymob_details': paymob_details
         })
 
     @action(detail=True, methods=['post'])
@@ -683,7 +695,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         car_image = request.FILES.get('car_image')
         notes = request.data.get('notes', '')
         if not odometer_image or not odometer_value:
-            return Response({'error_code': 'ODOMETER_REQUIRED', 'error_message': 'يجب رفع صورة عداد النهاية وقيمته.'}, status=400)
+            return Response({'error_code': 'ODOMETER_END_REQUIRED', 'error_message': 'صورة وقراءة عداد النهاية مطلوبة.'}, status=400)
         if not car_image:
             return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'يجب رفع صورة العربية عند التسليم.'}, status=400)
         from .models import SelfDriveOdometerImage, SelfDriveCarImage
@@ -1126,3 +1138,88 @@ def fake_refund(payment, user):
     payment.save()
     from .models import SelfDriveRentalLog
     SelfDriveRentalLog.objects.create(rental=payment.rental, action='deposit_refund', user=user, details=f'Fake refund for deposit: {payment.deposit_refund_transaction_id}')
+
+class NewCardDepositPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, rental_id):
+        """
+        يبدأ عملية دفع الديبوزيت بكارت جديد (يرجع رابط iframe فقط)
+        """
+        user = request.user
+        amount_cents = request.data.get('amount_cents')
+        payment_method = request.data.get('payment_method')
+        payment_type = request.data.get('type', 'deposit')
+        # تحقق من كل الفحوصات المطلوبة
+        rental = get_object_or_404(SelfDriveRental, id=rental_id)
+        if rental.renter != user:
+            return Response({'error_code': 'NOT_RENTER', 'error_message': 'يجب أن تكون المستأجر في هذا الحجز.'}, status=403)
+        payment = getattr(rental, 'payment', None)
+        if not payment or not hasattr(payment, 'deposit_amount'):
+            return Response({'error_code': 'PAYMENT_NOT_FOUND', 'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'}, status=400)
+        required_cents = int(round(float(payment.deposit_amount) * 100))
+        if not amount_cents or int(amount_cents) != required_cents:
+            return Response({'error_code': 'INVALID_AMOUNT', 'error_message': f'المبلغ المطلوب للعربون هو {required_cents} قرش.'}, status=400)
+        if payment.deposit_paid_status == 'Paid':
+            return Response({'error_code': 'ALREADY_PAID', 'error_message': 'تم دفع العربون بالفعل.'}, status=400)
+        if payment_method != 'new_card':
+            return Response({'error_code': 'INVALID_METHOD', 'error_message': 'طريقة الدفع يجب أن تكون new_card.'}, status=400)
+        # تنفيذ منطق Paymob للبطاقات الجديدة
+        try:
+            auth_token = paymob.get_auth_token()
+            import uuid
+            reference = str(uuid.uuid4())
+            user_id = str(user.id)
+            merchant_order_id_with_user = f"{reference}_{user_id}"
+            order_id = paymob.create_order(auth_token, amount_cents, merchant_order_id_with_user)
+            integration_id = settings.PAYMOB_INTEGRATION_ID_CARD
+            billing_data = {
+                "apartment": "NA",
+                "email": getattr(user, 'email', None) or "user@example.com",
+                "floor": "NA",
+                "first_name": getattr(user, 'first_name', None) or "Guest",
+                "street": "NA",
+                "building": "NA",
+                "phone_number": getattr(user, 'phone_number', "01000000000"),
+                "shipping_method": "NA",
+                "postal_code": "NA",
+                "city": "Cairo",
+                "country": "EG",
+                "last_name": getattr(user, 'last_name', None) or "User",
+                "state": "EG"
+            }
+            payment_token = paymob.get_payment_token(
+                auth_token, order_id, amount_cents, billing_data, integration_id
+            )
+            iframe_url = f"https://accept.paymob.com/api/acceptance/iframes/{settings.PAYMOB_IFRAME_ID}?payment_token={payment_token}"
+            # يمكنك هنا حفظ order_id في payment أو جدول وسيط لو أردت تتبع العملية
+            payment.deposit_transaction_id = order_id  # مؤقتًا لتتبع العملية
+            payment.save()
+            return Response({
+                'iframe_url': iframe_url,
+                'order_id': order_id,
+                'message': 'يرجى إكمال الدفع عبر الرابط'
+            })
+        except Exception as e:
+            return Response({'error_code': 'PAYMOB_ERROR', 'error_message': str(e)}, status=500)
+
+    def get(self, request, rental_id):
+        """
+        يرجع حالة الدفع وتفاصيل آخر عملية (من SelfDrivePayment)
+        """
+        user = request.user
+        rental = get_object_or_404(SelfDriveRental, id=rental_id)
+        if rental.renter != user:
+            return Response({'error_code': 'NOT_RENTER', 'error_message': 'يجب أن تكون المستأجر في هذا الحجز.'}, status=403)
+        payment = getattr(rental, 'payment', None)
+        if not payment:
+            return Response({'error_code': 'PAYMENT_NOT_FOUND', 'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'}, status=400)
+        # يمكنك هنا إضافة تفاصيل أكثر من جدول الدفع أو من جدول منفصل لو حفظت تفاصيل Paymob
+        from .serializers import SelfDrivePaymentSerializer
+        return Response({
+            'deposit_paid_status': payment.deposit_paid_status,
+            'deposit_paid_at': payment.deposit_paid_at,
+            'deposit_transaction_id': payment.deposit_transaction_id,
+            'payment': SelfDrivePaymentSerializer(payment).data,
+            # أضف هنا أي تفاصيل أخرى تحتاجها
+        })

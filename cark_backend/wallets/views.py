@@ -98,6 +98,7 @@ class WalletRechargeView(APIView):
                         'description': f"شحن محفظة - {recharge.amount} جنيه"
                     }
                     
+                    # payment_transaction = PaymentTransaction.objects.create(...)
                     payment_response = PaymobService.create_payment_intent(payment_data)
                     
                     return Response({
@@ -351,9 +352,9 @@ def wallet_payment_webhook(request):
         
         # البحث عن معاملة الدفع
         from payments.models import PaymentTransaction
-        payment_transaction = PaymentTransaction.objects.get(
-            paymob_transaction_id=payment_data.get('transaction_id')
-        )
+        # payment_transaction = PaymentTransaction.objects.get(
+        #     paymob_transaction_id=payment_data.get('transaction_id')
+        # )
         
         # البحث عن طلب الشحن المرتبط
         recharge = WalletRecharge.objects.get(

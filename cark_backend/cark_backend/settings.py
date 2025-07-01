@@ -50,7 +50,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "supplement-women-puts-systems.trycloudflare.com",
+    "worth-quantity-electricity-outcome.trycloudflare.com",
     "127.0.0.1",
 ]
 
@@ -115,7 +115,7 @@ WSGI_APPLICATION = 'cark_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cark',
+        'NAME': 'cark-V1',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
