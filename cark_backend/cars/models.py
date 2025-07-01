@@ -89,6 +89,8 @@ class Car(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approval_status = models.BooleanField(default=False)
+    avg_rating = models.FloatField(default=0)
+    total_reviews = models.PositiveIntegerField(default=0)
 
 class CarRentalOptions(models.Model):
     car = models.OneToOneField(Car, on_delete=models.CASCADE, related_name='rental_options')

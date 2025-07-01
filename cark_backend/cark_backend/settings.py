@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'selfdrive_rentals',
     'payments',
     'wallets',
+    'feedback',
 ]
 
 

@@ -24,6 +24,9 @@ from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
+import random
+
+
 class SelfDriveRentalViewSet(viewsets.ModelViewSet):
     queryset = SelfDriveRental.objects.all()
     serializer_class = SelfDriveRentalSerializer
@@ -462,10 +465,23 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'صورة العربية مطلوبة.'}, status=400)
         if not odometer_image or not odometer_value:
             return Response({'error_code': 'ODOMETER_START_REQUIRED', 'error_message': 'صورة وقراءة عداد البداية مطلوبة.'}, status=400)
-        from .models import SelfDriveCarImage
-        SelfDriveCarImage.objects.create(rental=rental, image=car_image, type='pickup', uploaded_by='renter')
-        from .models import SelfDriveOdometerImage
+        from .models import SelfDriveCarImage, SelfDriveOdometerImage
+
+        # --- تعديل التسمية ---
+        car_identifier = getattr(rental.car, 'plate_number', None) or getattr(rental.car, 'model', 'car')
+        car_identifier = str(car_identifier).replace(' ', '_')
+        rental_type = 'pickup'
+        # car image
+        car_image.name = f"{car_identifier}_{rental_type}_car_{rental.id}.png"
+        SelfDriveCarImage.objects.create(rental=rental, image=car_image, type=rental_type, uploaded_by='renter')
+        # odometer image
+        odometer_image.name = f"{car_identifier}_{rental_type}_odometer_{rental.id}.png"
         SelfDriveOdometerImage.objects.create(rental=rental, image=odometer_image, value=odometer_value, type='start')
+
+        #from .models import SelfDriveCarImage
+        #SelfDriveCarImage.objects.create(rental=rental, image=car_image, type='pickup', uploaded_by='renter')
+        #from .models import SelfDriveOdometerImage
+        #SelfDriveOdometerImage.objects.create(rental=rental, image=odometer_image, value=odometer_value, type='start')
         # تحقق من توقيع المستأجر
         if not contract.renter_signed:
             contract.renter_signed = True
@@ -673,15 +689,109 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             'timestamp': last_location.timestamp
         })
 
+    # @action(detail=True, methods=['post'])
+    # def request_location(self, request, pk=None):
+    #     rental = self.get_object()
+    #     # تخيلي: حفظ طلب الموقع
+    #     lat = request.data.get('latitude')
+    #     lng = request.data.get('longitude')
+    #     SelfDriveLiveLocation.objects.create(rental=rental, latitude=lat, longitude=lng)
+    #     SelfDriveRentalLog.objects.create(rental=rental, action='location_requested', user=request.user, details=f'Location requested: {lat}, {lng}')
+    #     return Response({'status': 'تم حفظ الموقع.'})
+    
     @action(detail=True, methods=['post'])
     def request_location(self, request, pk=None):
         rental = self.get_object()
-        # تخيلي: حفظ طلب الموقع
-        lat = request.data.get('latitude')
-        lng = request.data.get('longitude')
+        # استخدم الدالة الوهمية لجلب إحداثيات عشوائية
+        lat, lng = get_random_lat_lng()
         SelfDriveLiveLocation.objects.create(rental=rental, latitude=lat, longitude=lng)
-        SelfDriveRentalLog.objects.create(rental=rental, action='location_requested', user=request.user, details=f'Location requested: {lat}, {lng}')
-        return Response({'status': 'تم حفظ الموقع.'})
+        SelfDriveRentalLog.objects.create(
+            rental=rental,
+            action='location_requested',
+            user=request.user,
+            details=f'Location requested: {lat}, {lng}'
+        )
+        return Response({'status': 'تم حفظ الموقع.', 'latitude': lat, 'longitude': lng})
+    
+    @action(detail=True, methods=['post'])
+    # def renter_dropoff_handover(self, request, pk=None):
+    #     rental = self.get_object()
+    #     contract = rental.contract
+    #     if contract.renter_return_done:
+    #         return Response({'error_code': 'RENTER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'تم تنفيذ تسليم المستأجر (نهاية الرحلة) بالفعل ولا يمكن تكراره.'}, status=400)
+    #     payment = rental.payment
+    #     odometer_image = request.FILES.get('odometer_image')
+    #     odometer_value = request.data.get('odometer_value')
+    #     car_image = request.FILES.get('car_image')
+    #     notes = request.data.get('notes', '')
+    #     if not odometer_image or not odometer_value:
+    #         return Response({'error_code': 'ODOMETER_END_REQUIRED', 'error_message': 'صورة وقراءة عداد النهاية مطلوبة.'}, status=400)
+    #     if not car_image:
+    #         return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'يجب رفع صورة العربية عند التسليم.'}, status=400)
+    #     from .models import SelfDriveOdometerImage, SelfDriveCarImage
+    #     SelfDriveOdometerImage.objects.create(
+    #         rental=rental,
+    #         image=odometer_image,
+    #         value=float(odometer_value),
+    #         type='end'
+    #     )
+    #     SelfDriveCarImage.objects.create(rental=rental, image=car_image, type='return', uploaded_by='renter', notes=notes)
+    #     actual_dropoff_time = timezone.now()
+    #     try:
+    #         payment = calculate_selfdrive_payment(rental, actual_dropoff_time=actual_dropoff_time)
+    #     except ValueError as e:
+    #         return Response({'error_code': 'INVALID_DATA', 'error_message': str(e)}, status=400)
+    #     # إذا كان هناك زيادة يجب دفعها إلكترونيًا
+    #     if payment.excess_amount > 0 and payment.payment_method in ['visa', 'wallet'] and payment.excess_paid_status != 'Paid':
+    #         from payments.services.payment_gateway import simulate_payment_gateway
+    #         payment_response = simulate_payment_gateway(
+    #             amount=payment.excess_amount,
+    #             payment_method=payment.payment_method,
+    #             user=request.user
+    #         )
+    #         if payment_response.success:
+    #             payment.excess_paid_status = 'Paid'
+    #             payment.excess_paid_at = timezone.now()
+    #             payment.excess_transaction_id = payment_response.transaction_id
+    #             payment.save()
+    #             from .models import SelfDriveRentalLog
+    #             SelfDriveRentalLog.objects.create(
+    #                 rental=payment.rental,
+    #                 action='payment',
+    #                 user=request.user,
+    #                 details=f'Excess payment: {payment_response.transaction_id}'
+    #             )
+    #         else:
+    #             return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
+    #     contract.renter_return_done = True
+    #     contract.renter_return_done_at = actual_dropoff_time
+    #     contract.save()
+    #     SelfDriveRentalLog.objects.create(rental=rental, action='renter_dropoff_handover', user=request.user, details='Renter did dropoff handover. Excess calculated.')
+    #     # Build excess details and payment info
+    #     breakdown = getattr(rental, 'breakdown', None)
+    #     excess_details = None
+    #     if breakdown:
+    #         excess_details = {
+    #             'extra_km_fee': breakdown.extra_km_fee,
+    #             'late_fee': breakdown.late_fee,
+    #             'extra_km': breakdown.extra_km,
+    #             'extra_km_cost': breakdown.extra_km_cost,
+    #             'late_days': breakdown.late_days,
+    #             'late_fee_per_day': breakdown.daily_price,
+    #             'late_fee_service_percent': 30
+    #         }
+    #     excess_payment = {
+    #         'excess_paid_status': payment.excess_paid_status,
+    #         'excess_paid_at': payment.excess_paid_at,
+    #         'excess_transaction_id': payment.excess_transaction_id,
+    #         'payment_method': payment.payment_method
+    #     }
+    #     return Response({
+    #         'status': 'تم تسليم السيارة من المستأجر (نهاية الرحلة).',
+    #         'excess_amount': payment.excess_amount,
+    #         'excess_details': excess_details,
+    #         'excess_payment': excess_payment
+    #     })
 
     @action(detail=True, methods=['post'])
     def renter_dropoff_handover(self, request, pk=None):
@@ -699,40 +809,78 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         if not car_image:
             return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'يجب رفع صورة العربية عند التسليم.'}, status=400)
         from .models import SelfDriveOdometerImage, SelfDriveCarImage
+
+        # --- تعديل التسمية ---
+        car_identifier = getattr(rental.car, 'plate_number', None) or getattr(rental.car, 'model', 'car')
+        car_identifier = str(car_identifier).replace(' ', '_')
+        rental_type = 'return'
+        # car image
+        car_image.name = f"{car_identifier}_{rental_type}_car_{rental.id}.png"
+        SelfDriveCarImage.objects.create(rental=rental, image=car_image, type=rental_type, uploaded_by='renter', notes=notes)
+        # odometer image
+        odometer_image.name = f"{car_identifier}_{rental_type}_odometer_{rental.id}.png"
         SelfDriveOdometerImage.objects.create(
             rental=rental,
             image=odometer_image,
             value=float(odometer_value),
             type='end'
         )
-        SelfDriveCarImage.objects.create(rental=rental, image=car_image, type='return', uploaded_by='renter', notes=notes)
+
         actual_dropoff_time = timezone.now()
         try:
             payment = calculate_selfdrive_payment(rental, actual_dropoff_time=actual_dropoff_time)
         except ValueError as e:
             return Response({'error_code': 'INVALID_DATA', 'error_message': str(e)}, status=400)
-        # إذا كان هناك زيادة يجب دفعها إلكترونيًا
+
+        # الدفع الإلكتروني للزيادة بنفس منطق pickup
+        paymob_details = None
         if payment.excess_amount > 0 and payment.payment_method in ['visa', 'wallet'] and payment.excess_paid_status != 'Paid':
-            from payments.services.payment_gateway import simulate_payment_gateway
-            payment_response = simulate_payment_gateway(
-                amount=payment.excess_amount,
-                payment_method=payment.payment_method,
-                user=request.user
-            )
-            if payment_response.success:
-                payment.excess_paid_status = 'Paid'
-                payment.excess_paid_at = timezone.now()
-                payment.excess_transaction_id = payment_response.transaction_id
+            if payment.payment_method == 'visa':
+                selected_card = getattr(rental, 'selected_card', None)
+                if not selected_card:
+                    return Response({'error_code': 'NO_SELECTED_CARD', 'error_message': 'لم يتم اختيار كارت فيزا لهذا الحجز.'}, status=400)
+                if selected_card.user != request.user:
+                    return Response({'error_code': 'CARD_NOT_OWNED', 'error_message': 'الكارت المختار لا يخصك.'}, status=403)
+                from payments.services.payment_gateway import pay_with_saved_card_gateway
+                amount_cents = int(round(float(payment.excess_amount) * 100))
+                result = pay_with_saved_card_gateway(amount_cents, request.user, selected_card.token)
+                payment.excess_paid_status = 'Paid' if result['success'] else 'Pending'
+                payment.excess_paid_at = timezone.now() if result['success'] else None
+                payment.excess_transaction_id = result['transaction_id']
                 payment.save()
                 from .models import SelfDriveRentalLog
                 SelfDriveRentalLog.objects.create(
                     rental=payment.rental,
                     action='payment',
                     user=request.user,
-                    details=f'Excess payment: {payment_response.transaction_id}'
+                    details=f'Excess payment: {result}'
                 )
+                if not result['success']:
+                    return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': result['message'], 'paymob_details': result}, status=400)
+                paymob_details = result
             else:
-                return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
+                # محفظة أو طرق أخرى
+                from payments.services.payment_gateway import simulate_payment_gateway
+                payment_response = simulate_payment_gateway(
+                    amount=payment.excess_amount,
+                    payment_method=payment.payment_method,
+                    user=request.user
+                )
+                if payment_response.success:
+                    payment.excess_paid_status = 'Paid'
+                    payment.excess_paid_at = timezone.now()
+                    payment.excess_transaction_id = payment_response.transaction_id
+                    payment.save()
+                    from .models import SelfDriveRentalLog
+                    SelfDriveRentalLog.objects.create(
+                        rental=payment.rental,
+                        action='payment',
+                        user=request.user,
+                        details=f'Excess payment: {payment_response.transaction_id}'
+                    )
+                else:
+                    return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
+
         contract.renter_return_done = True
         contract.renter_return_done_at = actual_dropoff_time
         contract.save()
@@ -758,15 +906,19 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         }
         return Response({
             'status': 'تم تسليم السيارة من المستأجر (نهاية الرحلة).',
+            'car_image': car_image.name,
+            'odometer_image': odometer_image.name,
             'excess_amount': payment.excess_amount,
             'excess_details': excess_details,
-            'excess_payment': excess_payment
+            'excess_payment': excess_payment,
+            'paymob_details': paymob_details
         })
 
     @action(detail=True, methods=['post'])
     def owner_dropoff_handover(self, request, pk=None):
         rental = self.get_object()
         contract = rental.contract
+        
         # لا يمكن تنفيذ هاند أوفر المالك إلا بعد هاند أوفر المستأجر
         if not contract.renter_return_done:
             return Response({'error_code': 'RENTER_HANDOVER_REQUIRED', 'error_message': 'يجب أن يقوم المستأجر بتسليم السيارة أولاً.'}, status=400)
@@ -774,6 +926,12 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             return Response({'error_code': 'OWNER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'تم تنفيذ تسليم المالك (نهاية الرحلة) بالفعل ولا يمكن تكراره.'}, status=400)
         notes = request.data.get('notes', '')
         payment = rental.payment
+
+        # تحقق من عدم السماح بتأكيد الكاش في الدفع الإلكتروني
+        confirm_excess_cash = request.data.get('confirm_excess_cash')
+        if payment.payment_method in ['visa', 'wallet']:
+            if confirm_excess_cash is not None:
+                return Response({'error_code': 'CASH_NOT_ALLOWED', 'error_message': 'الدفع إلكتروني ولا يمكن تأكيد استلام كاش.'}, status=400)
         # --- لا تغير أي شيء في الكونتراكت هنا ---
         if payment.payment_method == 'cash':
             confirm_excess_cash = request.data.get('confirm_excess_cash')
@@ -782,6 +940,8 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                     if str(confirm_excess_cash).lower() == 'true':
                         payment.excess_paid_status = 'Paid'
                         payment.excess_paid_at = timezone.now()
+                        payment.excess_transaction_id = f'excess_cash_{rental.id}'  # محاكاة معرف المعاملة
+ 
                         payment.save()
                     else:
                         return Response({'error_code': 'EXCESS_CASH_CONFIRM_REQUIRED', 'error_message': 'يجب على المالك تأكيد استلام الزيادة كاش عبر confirm_excess_cash=true.'}, status=400)
@@ -989,6 +1149,11 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         serializer = SelfDriveRentalSerializer(rental)
         return Response(serializer.data)
 
+def get_random_lat_lng():
+    # توليد إحداثيات عشوائية داخل مصر (مثال)
+    lat = round(random.uniform(22.0, 31.0), 6)
+    lng = round(random.uniform(25.0, 35.0), 6)
+    return lat, lng
 def calculate_selfdrive_payment(rental, actual_dropoff_time=None):
     # تحقق من وجود سياسة الاستخدام
     usage_policy = getattr(rental.car, 'usage_policy', None)
