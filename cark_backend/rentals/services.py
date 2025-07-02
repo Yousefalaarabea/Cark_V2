@@ -117,21 +117,13 @@ def calculate_rental_financials(
     base_cost = duration_days * daily_price
     total_cost = base_cost + extra_km_cost + waiting_cost
 
-    # Buffer (limits_excess_insurance)
-    if payment_method in ['visa', 'wallet']:
-        final_cost = total_cost * 1.25
-        limits_excess_insurance_amount = total_cost * 0.25
-    else:
-        final_cost = total_cost
-        limits_excess_insurance_amount = 0
+    # Simple calculation like self-drive (no buffer/limits_excess)
+    final_cost = total_cost
+    limits_excess_insurance_amount = 0  # Not used anymore
 
-    # Deposit and Remaining
-    if payment_method in ['visa', 'wallet']:
-        deposit = final_cost * 0.15
-        remaining = final_cost - deposit
-    else:
-        deposit = 0
-        remaining = final_cost
+    # Deposit and Remaining (ALL rentals pay deposit like self-drive)
+    deposit = final_cost * 0.15
+    remaining = final_cost - deposit
 
     # Platform & Driver
     platform_fee = total_cost * commission_rate
