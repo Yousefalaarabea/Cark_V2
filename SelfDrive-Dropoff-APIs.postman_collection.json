@@ -1,0 +1,464 @@
+{
+  "info": {
+    "name": "SelfDrive Dropoff & Handover APIs",
+    "description": "APIs for managing drop-off handover process, excess calculations, and rental summaries",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "rental_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Calculate Excess Fees",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"end_odometer_value\": 15000,\n  \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "calculate-excess", ""]
+        },
+        "description": "حساب الزيادات (كيلومترات إضافية ورسوم التأخير) بدون حفظ في قاعدة البيانات\n\n**Parameters:**\n- `end_odometer_value` (required): قراءة العداد النهائية\n- `actual_dropoff_time` (optional): وقت التسليم الفعلي (إذا لم يُحدد، سيتم استخدام الوقت الحالي)\n\n**Response:**\n- تفاصيل الكيلومترات المستخدمة والزائدة\n- حساب رسوم التأخير\n- إجمالي التكلفة النهائية\n- تفاصيل الأرباح والعمولة\n- معلومات طريقة الدفع"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end_odometer_value\": 15000,\n  \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/calculate-excess/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "calculate-excess", ""]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"rental_id\": 1,\n  \"calculation_time\": \"2025-01-20T20:00:00Z\",\n  \"km_details\": {\n    \"start_odometer\": 12000,\n    \"end_odometer\": 15000,\n    \"actual_km\": 3000,\n    \"allowed_km\": 2500,\n    \"extra_km\": 500,\n    \"extra_km_cost\": 2.5,\n    \"extra_km_fee\": 1250\n  },\n  \"time_details\": {\n    \"planned_end_time\": \"2025-01-20T18:00:00Z\",\n    \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\",\n    \"late_days\": 1,\n    \"late_fee_per_day\": 650,\n    \"late_fee\": 650\n  },\n  \"cost_summary\": {\n    \"initial_cost\": 5000,\n    \"extra_km_fee\": 1250,\n    \"late_fee\": 650,\n    \"total_excess\": 1900,\n    \"final_cost\": 6900\n  },\n  \"earnings\": {\n    \"commission_rate\": 0.15,\n    \"platform_earnings\": 1035,\n    \"driver_earnings\": 5865\n  },\n  \"payment_info\": {\n    \"payment_method\": \"visa\",\n    \"will_auto_charge\": true,\n    \"requires_cash_collection\": false\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. Renter Dropoff Preview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/renter-dropoff-preview/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "renter-dropoff-preview", ""]
+        },
+        "description": "معاينة تفاصيل الـ drop off للمستأجر قبل التأكيد\n\n**Access:** المستأجر فقط\n**Status Required:** Ongoing\n\n**Response:**\n- معلومات الإيجار والسيارة\n- تفاصيل العداد والكيلومترات المسموحة\n- معلومات الدفع\n- الخطوات المطلوبة للتسليم\n- تحذيرات (تأخير، خصم تلقائي)"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/renter-dropoff-preview/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "renter-dropoff-preview", ""]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"rental_info\": {\n    \"id\": 1,\n    \"car\": \"Toyota Camry\",\n    \"owner_name\": \"أحمد محمد\",\n    \"planned_end_time\": \"2025-01-20T18:00:00Z\",\n    \"current_time\": \"2025-01-20T20:00:00Z\"\n  },\n  \"odometer_info\": {\n    \"start_value\": 12000,\n    \"allowed_km\": 2500,\n    \"extra_km_cost\": 2.5\n  },\n  \"payment_info\": {\n    \"method\": \"visa\",\n    \"initial_cost\": 5000,\n    \"existing_excess\": 0,\n    \"auto_charge_excess\": true\n  },\n  \"required_steps\": [\n    \"Upload current car image\",\n    \"Upload odometer image and enter current value\",\n    \"Add any notes about car condition\",\n    \"Confirm handover\"\n  ],\n  \"warnings\": {\n    \"late_return\": true,\n    \"auto_charge\": true\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. Owner Dropoff Preview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/owner-dropoff-preview/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "owner-dropoff-preview", ""]
+        },
+        "description": "معاينة تفاصيل الـ drop off للمالك بعد تسليم المستأجر\n\n**Access:** المالك فقط\n**Prerequisite:** يجب أن يكون المستأجر قد أكمل التسليم\n\n**Response:**\n- معلومات الإيجار والمستأجر\n- تفاصيل الزيادات المطلوبة\n- متطلبات تحصيل النقد (إذا كان الدفع كاش)\n- ملخص الأرباح\n- الخطوات المطلوبة للمالك"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/owner-dropoff-preview/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "owner-dropoff-preview", ""]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"rental_info\": {\n    \"id\": 1,\n    \"car\": \"Toyota Camry\",\n    \"renter_name\": \"سارة أحمد\",\n    \"renter_return_time\": \"2025-01-20T20:15:00Z\"\n  },\n  \"excess_summary\": {\n    \"total_amount\": 1900,\n    \"details\": [\n      {\n        \"type\": \"extra_km\",\n        \"description\": \"زيادة كيلومترات: 500 كم\",\n        \"calculation\": \"500 × 2.5 = 1250 جنيه\",\n        \"amount\": 1250\n      },\n      {\n        \"type\": \"late_fee\",\n        \"description\": \"رسوم تأخير: 1 يوم\",\n        \"calculation\": \"1 × 650 = 650 جنيه\",\n        \"amount\": 650\n      }\n    ],\n    \"payment_method\": \"cash\",\n    \"already_charged\": false\n  },\n  \"cash_collection\": {\n    \"required\": true,\n    \"amount_to_collect\": 1900,\n    \"status\": \"pending\"\n  },\n  \"earnings_summary\": {\n    \"final_cost\": 6900,\n    \"platform_commission\": 1035,\n    \"owner_earnings\": 5865\n  },\n  \"required_steps\": [\n    \"Review excess charges\",\n    \"Collect cash payment\",\n    \"Add any notes about car condition\",\n    \"Confirm handover completion\"\n  ],\n  \"uploaded_images\": {\n    \"car_images\": 2,\n    \"odometer_images\": 1\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. Rental Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/summary/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "summary", ""]
+        },
+        "description": "ملخص شامل للإيجار بعد الانتهاء\n\n**Access:** المستأجر والمالك\n**Usage:** يُستخدم لعرض تقرير نهائي شامل عن الإيجار\n\n**Response:**\n- معلومات الإيجار الأساسية\n- الاستخدام الفعلي (الوقت والكيلومترات)\n- تفصيل التكاليف\n- تفاصيل الدفعات\n- الأرباح والعمولات\n- الجدول الزمني للإيجار"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/summary/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "summary", ""]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"rental_info\": {\n    \"id\": 1,\n    \"status\": \"Finished\",\n    \"car\": \"Toyota Camry\",\n    \"renter\": \"سارة أحمد\",\n    \"owner\": \"أحمد محمد\",\n    \"planned_period\": {\n      \"start\": \"2025-01-15T10:00:00Z\",\n      \"end\": \"2025-01-20T18:00:00Z\",\n      \"duration_days\": 6\n    }\n  },\n  \"actual_usage\": {\n    \"actual_dropoff_time\": \"2025-01-20T20:15:00Z\",\n    \"odometer\": {\n      \"start\": 12000,\n      \"end\": 15000,\n      \"total_km\": 3000\n    }\n  },\n  \"cost_breakdown\": {\n    \"initial_cost\": 5000,\n    \"base_cost\": 4500,\n    \"ctw_fee\": 500,\n    \"extra_charges\": {\n      \"extra_km_fee\": 1250,\n      \"late_fee\": 650,\n      \"total_extras\": 1900\n    },\n    \"final_cost\": 6900\n  },\n  \"payment_details\": {\n    \"method\": \"cash\",\n    \"deposit\": {\n      \"amount\": 1000,\n      \"status\": \"Paid\",\n      \"paid_at\": \"2025-01-14T15:30:00Z\"\n    },\n    \"remaining\": {\n      \"amount\": 4000,\n      \"status\": \"Paid\",\n      \"paid_at\": \"2025-01-15T10:00:00Z\"\n    },\n    \"excess\": {\n      \"amount\": 1900,\n      \"status\": \"Paid\",\n      \"paid_at\": \"2025-01-20T20:30:00Z\"\n    }\n  },\n  \"earnings\": {\n    \"commission_rate\": 0.15,\n    \"platform_earnings\": 1035,\n    \"owner_earnings\": 5865\n  },\n  \"timeline\": {\n    \"created_at\": \"2025-01-14T14:00:00Z\",\n    \"pickup_completed\": \"2025-01-15T10:15:00Z\",\n    \"return_completed\": \"2025-01-20T20:30:00Z\"\n  },\n  \"user_role\": \"renter\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "5. Test Cases - Calculate Excess (No Excess)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"end_odometer_value\": 14000,\n  \"actual_dropoff_time\": \"2025-01-20T17:00:00Z\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "calculate-excess", ""]
+        },
+        "description": "اختبار حالة عدم وجود زيادات\n- الكيلومترات ضمن الحد المسموح\n- التسليم في الوقت المحدد أو مبكراً"
+      },
+      "response": [
+        {
+          "name": "No Excess Response",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end_odometer_value\": 14000,\n  \"actual_dropoff_time\": \"2025-01-20T17:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/calculate-excess/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "calculate-excess", ""]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"rental_id\": 1,\n  \"calculation_time\": \"2025-01-20T17:00:00Z\",\n  \"km_details\": {\n    \"start_odometer\": 12000,\n    \"end_odometer\": 14000,\n    \"actual_km\": 2000,\n    \"allowed_km\": 2500,\n    \"extra_km\": 0,\n    \"extra_km_cost\": 2.5,\n    \"extra_km_fee\": 0\n  },\n  \"time_details\": {\n    \"planned_end_time\": \"2025-01-20T18:00:00Z\",\n    \"actual_dropoff_time\": \"2025-01-20T17:00:00Z\",\n    \"late_days\": 0,\n    \"late_fee_per_day\": 0,\n    \"late_fee\": 0\n  },\n  \"cost_summary\": {\n    \"initial_cost\": 5000,\n    \"extra_km_fee\": 0,\n    \"late_fee\": 0,\n    \"total_excess\": 0,\n    \"final_cost\": 5000\n  },\n  \"earnings\": {\n    \"commission_rate\": 0.15,\n    \"platform_earnings\": 750,\n    \"driver_earnings\": 4250\n  },\n  \"payment_info\": {\n    \"payment_method\": \"visa\",\n    \"will_auto_charge\": true,\n    \"requires_cash_collection\": false\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "6. Test Cases - Calculate Excess (Cash Payment)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"end_odometer_value\": 16000\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "calculate-excess", ""]
+        },
+        "description": "اختبار حالة الدفع النقدي مع وجود زيادات\n- بدون تحديد وقت التسليم (سيستخدم الوقت الحالي)\n- زيادة في الكيلومترات\n- يتطلب تحصيل نقدي من المالك"
+      },
+      "response": [
+        {
+          "name": "Cash Payment with Excess",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end_odometer_value\": 16000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/calculate-excess/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "calculate-excess", ""]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"rental_id\": 1,\n  \"calculation_time\": \"2025-01-20T21:00:00Z\",\n  \"km_details\": {\n    \"start_odometer\": 12000,\n    \"end_odometer\": 16000,\n    \"actual_km\": 4000,\n    \"allowed_km\": 2500,\n    \"extra_km\": 1500,\n    \"extra_km_cost\": 2.5,\n    \"extra_km_fee\": 3750\n  },\n  \"time_details\": {\n    \"planned_end_time\": \"2025-01-20T18:00:00Z\",\n    \"actual_dropoff_time\": \"2025-01-20T21:00:00Z\",\n    \"late_days\": 1,\n    \"late_fee_per_day\": 650,\n    \"late_fee\": 650\n  },\n  \"cost_summary\": {\n    \"initial_cost\": 5000,\n    \"extra_km_fee\": 3750,\n    \"late_fee\": 650,\n    \"total_excess\": 4400,\n    \"final_cost\": 9400\n  },\n  \"earnings\": {\n    \"commission_rate\": 0.15,\n    \"platform_earnings\": 1410,\n    \"driver_earnings\": 7990\n  },\n  \"payment_info\": {\n    \"payment_method\": \"cash\",\n    \"will_auto_charge\": false,\n    \"requires_cash_collection\": true\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "7. Error Cases - Rental Not Found",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/999/renter-dropoff-preview/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "999", "renter-dropoff-preview", ""]
+        },
+        "description": "اختبار حالة عدم وجود الإيجار"
+      },
+      "response": [
+        {
+          "name": "Rental Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/999/renter-dropoff-preview/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "999", "renter-dropoff-preview", ""]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"error\": \"Rental not found\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "8. Error Cases - Permission Denied",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{wrong_user_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/owner-dropoff-preview/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "owner-dropoff-preview", ""]
+        },
+        "description": "اختبار حالة عدم وجود صلاحية للوصول"
+      },
+      "response": [
+        {
+          "name": "Permission Denied",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/owner-dropoff-preview/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "owner-dropoff-preview", ""]
+            }
+          },
+          "status": "Forbidden",
+          "code": 403,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"error\": \"Only owner can access this\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "9. Error Cases - Invalid Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/renter-dropoff-preview/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "renter-dropoff-preview", ""]
+        },
+        "description": "اختبار حالة حالة الإيجار غير صحيحة (مثلاً الإيجار منتهي بالفعل)"
+      },
+      "response": [
+        {
+          "name": "Invalid Status",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/renter-dropoff-preview/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "renter-dropoff-preview", ""]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"error\": \"Rental is not ongoing\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "10. Error Cases - Missing Required Data",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auth_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+          "host": ["{{base_url}}"],
+          "path": ["selfdrive-rentals", "{{rental_id}}", "calculate-excess", ""]
+        },
+        "description": "اختبار حالة عدم وجود البيانات المطلوبة"
+      },
+      "response": [
+        {
+          "name": "Missing Required Data",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/selfdrive-rentals/1/calculate-excess/",
+              "host": ["{{base_url}}"],
+              "path": ["selfdrive-rentals", "1", "calculate-excess", ""]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n  \"error\": \"end_odometer_value is required\"\n}"
+        }
+      ]
+    }
+  ]
+} 

@@ -50,7 +50,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "worth-quantity-electricity-outcome.trycloudflare.com",
+    "annie-township-phoenix-means.trycloudflare.com",
     "127.0.0.1",
 ]
 

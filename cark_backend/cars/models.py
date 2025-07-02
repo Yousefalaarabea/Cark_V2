@@ -84,18 +84,18 @@ class Car(models.Model):
     transmission_type = models.CharField(max_length=10, choices=TRANSMISSION_CHOICES)
     fuel_type = models.CharField(max_length=10, choices=FUEL_CHOICES)
     current_odometer_reading = models.IntegerField()
-    availability = models.BooleanField(default=True)
+    availability = models.BooleanField(default=True)  # type: ignore
     current_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=AVAILABLE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    approval_status = models.BooleanField(default=False)
-    avg_rating = models.FloatField(default=0)
-    total_reviews = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)  # type: ignore
+    updated_at = models.DateTimeField(auto_now=True)  # type: ignore
+    approval_status = models.BooleanField(default=False)  # type: ignore
+    avg_rating = models.FloatField(default=0)  # type: ignore
+    total_reviews = models.PositiveIntegerField(default=0)  # type: ignore
 
 class CarRentalOptions(models.Model):
     car = models.OneToOneField(Car, on_delete=models.CASCADE, related_name='rental_options')
-    available_without_driver = models.BooleanField(default=False)
-    available_with_driver = models.BooleanField(default=False)
+    available_without_driver = models.BooleanField(default=False)  # type: ignore
+    available_with_driver = models.BooleanField(default=False)  # type: ignore
 
     daily_rental_price = models.DecimalField(max_digits=10, decimal_places=2 , null=True, blank=True)
     monthly_rental_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -114,6 +114,6 @@ class CarUsagePolicy(models.Model):
 
 class CarStats(models.Model):
     car = models.OneToOneField(Car, on_delete=models.CASCADE, related_name='stats')
-    rental_history_count = models.IntegerField(default=0)
+    rental_history_count = models.IntegerField(default=0)  # type: ignore
     total_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     

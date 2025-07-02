@@ -1,0 +1,454 @@
+{
+	"info": {
+		"_postman_id": "dropoff-apis-collection",
+		"name": "CARK SelfDrive Drop-off APIs",
+		"description": "APIs for managing drop-off handover process, excess calculations, and rental summaries",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		},
+		{
+			"key": "rental_id",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Calculate Excess Fees",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has rental_id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('rental_id');",
+							"});",
+							"",
+							"pm.test(\"Response has km_details\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('km_details');",
+							"    pm.expect(jsonData.km_details).to.have.property('extra_km_fee');",
+							"});",
+							"",
+							"pm.test(\"Response has cost_summary\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('cost_summary');",
+							"    pm.expect(jsonData.cost_summary).to.have.property('total_excess');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"end_odometer_value\": 15000,\n  \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"calculate-excess",
+						""
+					]
+				},
+				"description": "حساب الزيادات (كيلومترات إضافية ورسوم التأخير) بدون حفظ في قاعدة البيانات\n\n**Parameters:**\n- `end_odometer_value` (required): قراءة العداد النهائية\n- `actual_dropoff_time` (optional): وقت التسليم الفعلي\n\n**Response:**\n- تفاصيل الكيلومترات والزيادات\n- حساب رسوم التأخير\n- التكلفة النهائية والأرباح"
+			}
+		},
+		{
+			"name": "1.1 Calculate Excess - No Excess",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"No excess charges\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.cost_summary.total_excess).to.equal(0);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"end_odometer_value\": 14000,\n  \"actual_dropoff_time\": \"2025-01-20T17:00:00Z\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"calculate-excess",
+						""
+					]
+				},
+				"description": "اختبار حالة عدم وجود زيادات - التسليم في الوقت المحدد مع كيلومترات ضمن الحد المسموح"
+			}
+		},
+		{
+			"name": "1.2 Calculate Excess - Cash Payment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Requires cash collection\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    if (jsonData.cost_summary.total_excess > 0) {",
+							"        pm.expect(jsonData.payment_info.requires_cash_collection).to.be.true;",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"end_odometer_value\": 16000\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"calculate-excess",
+						""
+					]
+				},
+				"description": "اختبار حالة الدفع النقدي مع زيادات - يتطلب تحصيل نقدي من المالك"
+			}
+		},
+		{
+			"name": "2. Renter Dropoff Preview",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has rental_info\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('rental_info');",
+							"    pm.expect(jsonData.rental_info).to.have.property('car');",
+							"});",
+							"",
+							"pm.test(\"Response has required_steps\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('required_steps');",
+							"    pm.expect(jsonData.required_steps).to.be.an('array');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/renter-dropoff-preview/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"renter-dropoff-preview",
+						""
+					]
+				},
+				"description": "معاينة تفاصيل التسليم للمستأجر قبل التأكيد\n\n**Access:** المستأجر فقط\n**Status Required:** Ongoing\n\n**Response:**\n- معلومات الإيجار والسيارة\n- تفاصيل العداد والكيلومترات المسموحة\n- الخطوات المطلوبة للتسليم"
+			}
+		},
+		{
+			"name": "3. Owner Dropoff Preview",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has excess_summary\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('excess_summary');",
+							"    pm.expect(jsonData.excess_summary).to.have.property('total_amount');",
+							"});",
+							"",
+							"pm.test(\"Response has cash_collection info\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('cash_collection');",
+							"    pm.expect(jsonData.cash_collection).to.have.property('required');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/owner-dropoff-preview/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"owner-dropoff-preview",
+						""
+					]
+				},
+				"description": "معاينة تفاصيل التسليم للمالك بعد تسليم المستأجر\n\n**Access:** المالك فقط\n**Prerequisite:** يجب أن يكون المستأجر قد أكمل التسليم\n\n**Response:**\n- تفاصيل الزيادات المطلوبة\n- متطلبات تحصيل النقد\n- ملخص الأرباح"
+			}
+		},
+		{
+			"name": "4. Rental Summary",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response has rental_info\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('rental_info');",
+							"    pm.expect(jsonData.rental_info).to.have.property('status');",
+							"});",
+							"",
+							"pm.test(\"Response has cost_breakdown\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('cost_breakdown');",
+							"    pm.expect(jsonData.cost_breakdown).to.have.property('final_cost');",
+							"});",
+							"",
+							"pm.test(\"Response has payment_details\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('payment_details');",
+							"    pm.expect(jsonData.payment_details).to.have.property('method');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/summary/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"summary",
+						""
+					]
+				},
+				"description": "ملخص شامل للإيجار بعد الانتهاء\n\n**Access:** المستأجر والمالك\n\n**Response:**\n- معلومات الإيجار الأساسية\n- الاستخدام الفعلي\n- تفصيل التكاليف والدفعات\n- الأرباح والعمولات\n- الجدول الزمني"
+			}
+		},
+		{
+			"name": "Error Test - Rental Not Found",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 404\", function () {",
+							"    pm.response.to.have.status(404);",
+							"});",
+							"",
+							"pm.test(\"Error message is correct\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.error).to.equal('Rental not found');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/999/renter-dropoff-preview/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"999",
+						"renter-dropoff-preview",
+						""
+					]
+				},
+				"description": "اختبار حالة عدم وجود الإيجار - يجب أن يعيد 404"
+			}
+		},
+		{
+			"name": "Error Test - Missing Required Data",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 400\", function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test(\"Error message mentions required field\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.error).to.include('required');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"actual_dropoff_time\": \"2025-01-20T20:00:00Z\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/calculate-excess/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"calculate-excess",
+						""
+					]
+				},
+				"description": "اختبار حالة عدم وجود البيانات المطلوبة - يجب أن يعيد 400"
+			}
+		}
+	]
+} 
