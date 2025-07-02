@@ -87,6 +87,7 @@ class SelfDriveRentalSerializer(serializers.ModelSerializer):
     payment_method = serializers.CharField(write_only=True, required=False)
     logs = SelfDriveRentalLogSerializer(many=True, read_only=True)
     status_history = SelfDriveRentalStatusHistorySerializer(many=True, read_only=True)
+    selected_card = serializers.IntegerField(write_only=True, required=False)
 
     def validate_payment_method(self, value):
         allowed = ['cash', 'visa', 'wallet']
@@ -112,10 +113,33 @@ class SelfDriveRentalSerializer(serializers.ModelSerializer):
     def get_dropoff_lng(self, obj):
         return str(obj.dropoff_longitude) if obj.dropoff_longitude is not None else None
 
+    def validate(self, attrs):
+        payment_method = attrs.get('payment_method', 'cash').lower()
+        selected_card = attrs.get('selected_card')
+        user = self.context['request'].user if 'request' in self.context else None
+        if payment_method == 'visa':
+            if not selected_card:
+                raise serializers.ValidationError({"selected_card": "يجب اختيار كارت فيزا عند اختيار طريقة الدفع فيزا."})
+            from payments.models import SavedCard
+            if user is None:
+                raise serializers.ValidationError("لا يمكن التحقق من المستخدم.")
+            try:
+                card = SavedCard.objects.get(id=selected_card, user=user)
+            except SavedCard.DoesNotExist:
+                raise serializers.ValidationError({"selected_card": "الكارت غير موجود أو لا يخصك."})
+        else:
+            if selected_card:
+                raise serializers.ValidationError({"selected_card": "لا يمكن إرسال selected_card إلا مع طريقة دفع فيزا فقط."})
+        return attrs
+
     def create(self, validated_data):
+        selected_card = validated_data.pop('selected_card', None)
         payment_method = validated_data.pop('payment_method', 'cash')
         instance = super().create(validated_data)
         instance._payment_method = payment_method.lower()
+        if selected_card:
+            instance.selected_card_id = selected_card
+            instance.save(update_fields=["selected_card"])
         return instance
 
     class Meta:
@@ -129,6 +153,7 @@ class SelfDriveRentalSerializer(serializers.ModelSerializer):
             'payment_method', 'created_at', 'updated_at',
             'odometer_images', 'contract', 'live_locations', 'payment_info', 'breakdown',
             'logs', 'status_history',
+            'selected_card',
         ]
         read_only_fields = [
             'id', 'created_at', 'updated_at', 'odometer_images', 'contract', 'live_locations',
