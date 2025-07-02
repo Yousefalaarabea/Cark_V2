@@ -39,17 +39,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate_first_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("First name must contain letters only.")
-        if len(value) < 2:
-            raise serializers.ValidationError("First name must be at least 2 characters long.")
+        if not re.match(r'^[A-Za-z\u0600-\u06FF ]+$', value):
+            raise serializers.ValidationError("First name must contain letters and spaces only.")
+        if len(value.replace(' ', '')) < 2:
+            raise serializers.ValidationError("First name must be at least 2 letters (excluding spaces).")
         return value
 
     def validate_last_name(self, value):
-        if not value.isalpha():
-            raise serializers.ValidationError("Last name must contain letters only.")
-        if len(value) < 2:
-            raise serializers.ValidationError("Last name must be at least 2 characters long.")
+        if not re.match(r'^[A-Za-z\u0600-\u06FF ]+$', value):
+            raise serializers.ValidationError("Last name must contain letters and spaces only.")
+        if len(value.replace(' ', '')) < 2:
+            raise serializers.ValidationError("Last name must be at least 2 letters (excluding spaces).")
         return value
 
     def validate_password(self, value):
@@ -85,3 +85,21 @@ class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserRole
         fields = '__all__'
+
+class UserUpdatePermissionsSerializer(serializers.ModelSerializer):
+    """
+    Serializer لتعديل صلاحيات المستخدم (staff, superuser, active)
+    بدون أي قيود على الصلاحيات
+    """
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'is_active']
+        read_only_fields = ['id', 'email', 'first_name', 'last_name']
+
+    def update(self, instance, validated_data):
+        # تحديث الحقول المسموح بها فقط
+        instance.is_staff = validated_data.get('is_staff', instance.is_staff)
+        instance.is_superuser = validated_data.get('is_superuser', instance.is_superuser)
+        instance.is_active = validated_data.get('is_active', instance.is_active)
+        instance.save()
+        return instance
