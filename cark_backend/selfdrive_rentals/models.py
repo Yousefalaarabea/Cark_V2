@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from cars.models import Car
+from payments.models import SavedCard
 
 User = get_user_model()
 
@@ -24,6 +25,7 @@ class SelfDriveRental(models.Model):
     dropoff_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     dropoff_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default='Pending')
+    selected_card = models.ForeignKey(SavedCard, null=True, blank=True, on_delete=models.SET_NULL, related_name='selfdrive_rentals')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
