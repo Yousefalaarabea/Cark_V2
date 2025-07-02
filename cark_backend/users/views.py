@@ -5,7 +5,7 @@ from rest_framework import status
 from .models import User, Role, UserRole
 from rest_framework import viewsets , generics, permissions
 from .models import User, Role, UserRole
-from .serializers import RegisterSerializer, RoleSerializer, UserRoleSerializer
+from .serializers import RegisterSerializer, RoleSerializer, UserRoleSerializer, UserUpdatePermissionsSerializer
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated
 
@@ -31,6 +31,8 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
 
 class AssignRolesAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    
     def post(self, request):
         user_id = request.data.get('user_id')
         role_ids = request.data.get('role_ids', [])
@@ -69,6 +71,8 @@ class AssignRolesAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 class UserRolesAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    
     def get(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
@@ -83,3 +87,41 @@ class UserRolesAPIView(APIView):
             "email": user.email,
             "roles": roles
         }, status=status.HTTP_200_OK)
+
+class UpdateUserPermissionsAPIView(APIView):
+    """
+    API لتعديل صلاحيات المستخدم (staff, superuser, active)
+    بدون أي قيود على الصلاحيات
+    """
+    permission_classes = [permissions.AllowAny]  # السماح لأي شخص بالوصول
+    
+    def get(self, request, user_id):
+        """جلب المستخدم وصلاحياته الحالية"""
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = UserUpdatePermissionsSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def put(self, request, user_id):
+        """تحديث صلاحيات المستخدم"""
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = UserUpdatePermissionsSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "User permissions updated successfully.",
+                "user": serializer.data
+            }, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request, user_id):
+        """تحديث جزئي لصلاحيات المستخدم"""
+        return self.put(request, user_id)
