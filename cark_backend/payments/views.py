@@ -22,6 +22,7 @@ from .services.payment_gateway import simulate_payment_gateway
 from rentals.models import Rental, RentalPayment
 from selfdrive_rentals.models import SelfDriveRental, SelfDrivePayment
 from django.utils import timezone
+from decimal import Decimal
 
 User = get_user_model()
 
@@ -46,13 +47,6 @@ class StartPaymentView(APIView):
         except ValueError:
             return Response({"error": "Invalid 'amount_cents' value."}, status=400)
 
-        # تحقق من الرصيد السالب لو الغرض شحن المحفظة
-        if purpose == "wallet_recharge":
-            wallet = Wallet.objects.get(user=request.user)
-            amount_egp = int(amount_cents) / 100
-            if wallet.balance < 0 and amount_egp < abs(wallet.balance):
-                return Response({"error": "Amount must be greater than or equal to your negative wallet balance."}, status=400)
-
         reference = str(uuid.uuid4())
         user_id = str(request.user.id)
         if purpose == "wallet_recharge":
@@ -66,18 +60,15 @@ class StartPaymentView(APIView):
         except Exception as e:
             return Response({"error": f"Paymob API error: {e}"}, status=500)
 
-        try:
-            transaction = PaymentTransaction.objects.create(
-                user=request.user,
-                merchant_order_id=merchant_order_id_with_user,
-                paymob_order_id=order_id,
-                amount_cents=amount_cents,
-                currency="EGP",
-                payment_method=payment_method if payment_method else "card",
-                status="pending"
-            )
-        except IntegrityError:
-            return Response({"error": "Duplicate transaction reference."}, status=409)
+        # transaction = PaymentTransaction.objects.create(
+        #     user=request.user,
+        #     merchant_order_id=merchant_order_id_with_user,
+        #     paymob_order_id=order_id,
+        #     amount_cents=amount_cents,
+        #     currency="EGP",
+        #     payment_method=payment_method if payment_method else "card",
+        #     status="pending"
+        # )
 
         if saved_card_token:
             integration_id = settings.PAYMOB_INTEGRATION_ID_MOTO
@@ -107,9 +98,9 @@ class StartPaymentView(APIView):
                 auth_token, order_id, amount_cents, billing_data, integration_id, saved_card_token
             )
         except Exception as e:
-            transaction.status = "failed"
-            transaction.message = f"Payment token error: {e}"
-            transaction.save()
+            # transaction.status = "failed"
+            # transaction.message = f"Payment token error: {e}"
+            # transaction.save()
             return Response({"error": f"Payment token error: {e}"}, status=500)
 
         if saved_card_token:
@@ -122,10 +113,10 @@ class StartPaymentView(APIView):
                 success = charge_response.get("success", False)
                 if isinstance(success, str):
                     success = success.lower() == "true"
-                transaction.status = "completed" if success else "failed"
-                transaction.success = success
-                transaction.message = charge_response.get("message", "Charged saved card")
-                transaction.save()
+                # transaction.status = "completed" if success else "failed"
+                # transaction.success = success
+                # transaction.message = charge_response.get("message", "Charged saved card")
+                # transaction.save()
                 return Response({
                     "success": success,
                     "order_id": order_id,
@@ -133,10 +124,10 @@ class StartPaymentView(APIView):
                     "charge_response": charge_response
                 })
             except Exception as e:
-                transaction.status = "failed"
-                transaction.success = False
-                transaction.message = f"Saved card charge failed: {e}"
-                transaction.save()
+                # transaction.status = "failed"
+                # transaction.success = False
+                # transaction.message = f"Saved card charge failed: {e}"
+                # transaction.save()
                 return Response({
                     "success": False,
                     "error": str(e),
@@ -329,59 +320,99 @@ def paymob_webhook(request):
                 print(f"User with ID {user_uuid} not found for transaction {merchant_order_id}. Cannot link transaction to user.")
 
         # Save/update the transaction in the database
-        try:
-            transaction_obj, created = PaymentTransaction.objects.update_or_create(
-                merchant_order_id=merchant_order_id,
-                defaults={
-                    'user': user_obj,
-                    'paymob_transaction_id': transaction_data.get("id"),
-                    'paymob_order_id': order_data.get("id"),
-                    'amount_cents': transaction_data.get("amount_cents"),
-                    'currency': transaction_data.get("currency"),
-                    'success': transaction_data.get("success", False),
-                    'message': transaction_data.get("data.message", "No specific message"),
-                    'status': "completed" if transaction_data.get("success", False) else "failed",
-                    'card_type': source_data.get("type"),
-                    'card_pan': source_data.get("pan"),
-                    'payment_method': 'card' if source_data.get("type") else 'wallet',
-                }
-            )
-            if created:
-                print(f"➕ Created new transaction entry for {merchant_order_id}.")
-            else:
-                print(f"🔄 Updated existing transaction entry for {merchant_order_id}.")
+        # transaction_obj, created = PaymentTransaction.objects.update_or_create(
+        #     merchant_order_id=merchant_order_id,
+        #     defaults={
+        #         'user': user_obj,
+        #         'paymob_transaction_id': transaction_data.get("id"),
+        #         'paymob_order_id': order_data.get("id"),
+        #         'amount_cents': transaction_data.get("amount_cents"),
+        #         'currency': transaction_data.get("currency"),
+        #         'success': transaction_data.get("success", False),
+        #         'message': transaction_data.get("data.message", "No specific message"),
+        #         'status': "completed" if transaction_data.get("success", False) else "failed",
+        #         'card_type': source_data.get("type"),
+        #         'card_pan': source_data.get("pan"),
+        #         'payment_method': 'card' if source_data.get("type") else 'wallet',
+        #     }
+        # )
 
-            # لو الغرض شحن المحفظة وتم الدفع بنجاح، زود الرصيد
-            if purpose == "wallet_recharge" and transaction_data.get("success", False):
-                wallet = Wallet.objects.get(user=user_obj)
-                amount_egp = int(transaction_data.get("amount_cents", 0)) / 100
-                balance_before = wallet.balance
-                wallet.balance += amount_egp
-                wallet.save()
-                print(f"✅ Wallet recharged for user {user_obj.id} by {amount_egp} EGP.")
-                # إضافة سجل في WalletTransaction
-                transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
-                WalletTransaction.objects.create(
-                    wallet=wallet,
-                    transaction_type=transaction_type,
-                    amount=amount_egp,
-                    balance_before=balance_before,
-                    balance_after=wallet.balance,
-                    status='completed',
-                    description='شحن المحفظة عن طريق Paymob (مباشر)',
-                    reference_id=transaction_obj.id,
-                    reference_type='payment'
-                )
-
-        except Exception as e:
-            print(f"❌ Error saving/updating transaction in DB from webhook: {e}")
-            return Response({"error": "Internal server error during transaction update."}, status=500)
-        
         # NOTE: Token saving logic is now primarily in the 'TOKEN' webhook handler.
         # The 'is_tokenized' field in TRANSACTION webhooks isn't consistently present for your setup.
         # So we remove the token saving logic here to avoid redundancy/confusion.
 
         # Update the response payload for TRANSACTION type webhook
+        # --- تحديث SelfDrivePayment عند نجاح دفع الديبوزيت بكارت جديد ---
+        try:
+            from selfdrive_rentals.models import SelfDrivePayment
+            # ابحث عن SelfDrivePayment الذي يحمل deposit_transaction_id = order_id أو paymob_order_id
+            paymob_order_id = order_data.get("id")
+            transaction_id = transaction_data.get("id")
+            amount_cents = int(transaction_data.get("amount_cents", 0))
+            # ابحث أولاً بالـ order_id (تم حفظه مؤقتًا في deposit_transaction_id)
+            payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()
+            if not payment_obj:
+                # جرب البحث بالـ transaction_id
+                payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=transaction_id).first()
+            if payment_obj and amount_cents == int(round(float(payment_obj.deposit_amount) * 100)):
+                if transaction_data.get("success", False):
+                    payment_obj.deposit_paid_status = 'Paid'
+                    payment_obj.deposit_paid_at = timezone.now()
+                    payment_obj.deposit_transaction_id = transaction_id
+                    payment_obj.save()
+                    # Update rental status to Confirmed
+                    payment_obj.rental.status = 'Confirmed'
+                    payment_obj.rental.save()
+                    print(f"✅ SelfDrivePayment updated for deposit: {payment_obj.id}")
+        except Exception as e:
+            print(f"❌ Error updating SelfDrivePayment in webhook: {e}")
+            
+        # --- تحديث RentalPayment للعادي rentals عند نجاح دفع الديبوزيت بكارت جديد ---
+        try:
+            from rentals.models import RentalPayment
+            # Check if this is a regular rental deposit by looking at merchant_order_id
+            if merchant_order_id.startswith("rental_deposit_"):
+                paymob_order_id = order_data.get("id")
+                transaction_id = transaction_data.get("id")
+                amount_cents = int(transaction_data.get("amount_cents", 0))
+                
+                # Extract rental_id from merchant_order_id (format: rental_deposit_{rental_id}_{uuid}_{user_id})
+                merchant_parts = merchant_order_id.split('_')
+                if len(merchant_parts) >= 3:
+                    rental_id = merchant_parts[2]  # rental_id is the 3rd part
+                    
+                    # ابحث عن RentalPayment الذي يحمل deposit_transaction_id = order_id أو paymob_order_id
+                    payment_obj = RentalPayment.objects.filter(
+                        rental_id=rental_id,
+                        deposit_transaction_id=paymob_order_id
+                    ).first()
+                    
+                    if not payment_obj:
+                        # جرب البحث بالـ transaction_id أو بدون transaction_id
+                        payment_obj = RentalPayment.objects.filter(
+                            rental_id=rental_id,
+                            deposit_paid_status__in=['Pending', 'Failed']
+                        ).first()
+                        
+                    if payment_obj and amount_cents == int(round(float(payment_obj.deposit_amount) * 100)):
+                        if transaction_data.get("success", False):
+                            payment_obj.deposit_paid_status = 'Paid'
+                            payment_obj.deposit_paid_at = timezone.now()
+                            payment_obj.deposit_transaction_id = transaction_id
+                            payment_obj.save()
+                            
+                            # Update rental status to Confirmed
+                            payment_obj.rental.status = 'Confirmed'
+                            payment_obj.rental.save()
+                            print(f"✅ RentalPayment updated for deposit: {payment_obj.id}, rental: {rental_id}")
+                        else:
+                            payment_obj.deposit_paid_status = 'Failed'
+                            payment_obj.save()
+                            print(f"❌ RentalPayment deposit failed: {payment_obj.id}, rental: {rental_id}")
+                    else:
+                        print(f"⚠️ RentalPayment not found or amount mismatch for order {paymob_order_id}")
+        except Exception as e:
+            print(f"❌ Error updating RentalPayment in webhook: {e}")
         response_payload = {
             "message": "✅ Webhook processed successfully",
             "transaction_id": transaction_data.get("id"),
@@ -394,6 +425,28 @@ def paymob_webhook(request):
             "card_type": source_data.get("type"),
             "card_pan": source_data.get("pan"),
         }
+
+        # لو الغرض شحن المحفظة وتم الدفع بنجاح، زود الرصيد
+        if merchant_order_id.startswith("wallet_recharge") and transaction_data.get("success", False):
+            wallet = Wallet.objects.get(user=user_obj)
+            amount_egp = Decimal(str(transaction_data.get("amount_cents", 0))) / Decimal('100')
+            balance_before = wallet.balance
+            wallet.balance += amount_egp
+            wallet.save()
+            print(f"✅ Wallet recharged for user {user_obj.id} by {amount_egp} EGP.")
+            # إضافة سجل في WalletTransaction
+            transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
+            WalletTransaction.objects.create(
+                wallet=wallet,
+                transaction_type=transaction_type,
+                amount=amount_egp,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                status='completed',
+                description='شحن المحفظة عن طريق Paymob',
+                reference_id=transaction_data.get("id"),
+                reference_type='payment'
+            )
 
     else:
         print(f"Ignored webhook type: {webhook_type}.")
@@ -486,20 +539,20 @@ class PayView(APIView):
         except Exception as e:
             return Response({'detail': str(e), 'status': 'fail404'}, status=500)
         # حفظ PaymentTransaction
-        transaction = PaymentTransaction.objects.create(
-            user=user,
-            merchant_order_id=f"{rental_type}_{rental_id}_{timezone.now().timestamp()}",
-            amount_cents=int(amount * 100),
-            currency='EGP',
-            success=payment_response.success,
-            message=payment_response.message,
-            payment_method=method_type,
-            status=payment_response.status,
-            card_type=getattr(card, 'card_brand', None) if method_type == 'card' else None,
-            card_pan=getattr(card, 'card_last_four_digits', None) if method_type == 'card' else None,
-            paymob_transaction_id=payment_response.transaction_id,
-            paymob_order_id=None
-        )
+        # transaction = PaymentTransaction.objects.create(
+        #     user=user,
+        #     merchant_order_id=f"{rental_type}_{rental_id}_{timezone.now().timestamp()}",
+        #     amount_cents=int(amount * 100),
+        #     currency='EGP',
+        #     success=payment_response.success,
+        #     message=payment_response.message,
+        #     payment_method=method_type,
+        #     status=payment_response.status,
+        #     card_type=getattr(card, 'card_brand', None) if method_type == 'card' else None,
+        #     card_pan=getattr(card, 'card_last_four_digits', None) if method_type == 'card' else None,
+        #     paymob_transaction_id=payment_response.transaction_id,
+        #     paymob_order_id=None
+        # )
         # ربط الدفع بالـ Rental أو SelfDriveRental
         if rental_type == 'rental':
             rental = get_object_or_404(Rental, id=rental_id)
@@ -509,7 +562,7 @@ class PayView(APIView):
                 amount=amount,
                 status=payment_response.status,
                 paid_at=payment_response.paid_at,
-                transaction=transaction
+                transaction=payment_response
             )
         elif rental_type == 'selfdrive':
             rental = get_object_or_404(SelfDriveRental, id=rental_id)
@@ -519,7 +572,7 @@ class PayView(APIView):
                 amount=amount,
                 status=payment_response.status,
                 paid_at=payment_response.paid_at,
-                transaction=transaction
+                transaction=payment_response
             )
         return Response({
             'status': payment_response.status,
@@ -541,22 +594,31 @@ class ChargeSavedCardView(APIView):
 
     def post(self, request):
         saved_card_token = request.data.get("saved_card_token")
+        card_id = request.data.get("card_id")
         amount_cents = request.data.get("amount_cents")
-        if not saved_card_token or not amount_cents:
-            return Response({"error": "saved_card_token and amount_cents are required."}, status=400)
-        # تحقق من ملكية التوكن قبل أي بروسيس
-        card = SavedCard.objects.filter(token=saved_card_token, user=request.user).first()
-        if not card:
-            return Response({"error": "You do not own this card token."}, status=403)
+        # تحقق أن واحد فقط من card_id أو saved_card_token موجود
+        if (not saved_card_token and not card_id) or (saved_card_token and card_id):
+            return Response({"error": "يجب إرسال card_id أو saved_card_token فقط، وليس الاثنين معًا أو تركهم فارغين."}, status=400)
+        if not amount_cents:
+            return Response({"error": "amount_cents is required."}, status=400)
+        # جلب الكارت بناءً على id أو token
+        if card_id:
+            try:
+                card = SavedCard.objects.get(id=card_id, user=request.user)
+            except SavedCard.DoesNotExist:
+                return Response({"error": "Card not found or you do not own this card."}, status=404)
+            saved_card_token = card.token
+        else:
+            card = SavedCard.objects.filter(token=saved_card_token, user=request.user).first()
+            if not card:
+                return Response({"error": "You do not own this card token."}, status=403)
         try:
             amount_cents = int(amount_cents)
         except ValueError:
             return Response({"error": "Invalid amount_cents value."}, status=400)
-
         reference = str(uuid.uuid4())
         user_id = str(request.user.id)
         merchant_order_id_with_user = f"{reference}_{user_id}"
-
         try:
             auth_token = paymob.get_auth_token()
             order_id = paymob.create_order(auth_token, amount_cents, merchant_order_id_with_user)
@@ -584,26 +646,9 @@ class ChargeSavedCardView(APIView):
             success = charge_response.get("success", False)
             if isinstance(success, str):
                 success = success.lower() == "true"
-
-            # جلب بيانات الكارت من response لو متاحة
             card_type = charge_response.get("source_data.sub_type") or getattr(card, 'card_brand', None)
             card_pan = charge_response.get("source_data.pan") or getattr(card, 'card_last_four_digits', None)
-
-            PaymentTransaction.objects.create(
-                user=request.user,
-                merchant_order_id=merchant_order_id_with_user,
-                paymob_order_id=order_id,
-                amount_cents=amount_cents,
-                currency="EGP",
-                payment_method="card",
-                status="completed" if success else "failed",
-                success=success,
-                message=charge_response.get("message", "Charged saved card"),
-                card_type=card_type,
-                card_pan=card_pan,
-                paymob_transaction_id=charge_response.get("id")
-            )
-
+            # PaymentTransaction.objects.create(...) (معلق)
             return Response({
                 "success": success,
                 "order_id": order_id,
@@ -613,4 +658,31 @@ class ChargeSavedCardView(APIView):
         except Exception as e:
             return Response({"success": False, "error": str(e)}, status=500)
 
+class WalletRechargeView(StartPaymentView):
+    """
+    API لشحن المحفظة باستخدام نفس منطق StartPaymentView مع إضافة منطق شحن المحفظة بعد نجاح الدفع.
+    """
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        # لو الدفع نجح (success=True) وresponse فيه order_id وamount_cents
+        # تم تعليق منطق شحن المحفظة هنا لتفادي تكرار الشحن، حيث يتم الشحن فعليًا في الـ webhook فقط
+        # if response.status_code == 200 and response.data.get("success"):
+        #     amount_cents = int(request.data.get("amount_cents"))
+        #     amount_egp = Decimal(str(amount_cents)) / Decimal('100')
+        #     wallet = Wallet.objects.get(user=request.user)
+        #     balance_before = wallet.balance
+        #     wallet.balance += amount_egp
+        #     wallet.save()
+        #     transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
+        #     WalletTransaction.objects.create(
+        #         wallet=wallet,
+        #         transaction_type=transaction_type,
+        #         amount=amount_egp,
+        #         balance_before=balance_before,
+        #         balance_after=wallet.balance,
+        #         status='completed',
+        #         description='شحن المحفظة عن طريق Paymob (مباشر)',
+        #         reference_type='payment'
+        #     )
+        return response
 
