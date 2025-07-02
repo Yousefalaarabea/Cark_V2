@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/', include('selfdrive_rentals.urls')),  # إضافة رابط الـ API للايجار بدون سائق
     path('api/payments/', include('payments.urls')),  # إضافة رابط الـ API للمدفوعات
     path('api/wallets/', include('wallets.urls')),  # إضافة رابط الـ API للمحفظة
+    path('api/feedback/', include('feedback.urls')),  # إضافة رابط الـ API للتقييمات والتقارير
 ]
 
  #أثناء التطوير فقط: السماح لخادم Django أن يخدم ملفات الميديا
