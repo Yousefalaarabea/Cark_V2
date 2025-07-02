@@ -6,17 +6,12 @@ User = get_user_model()
 
 class Rental(models.Model):
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Canceled', 'Canceled'),
+        ('PendingOwnerConfirmation', 'Pending Owner Confirmation'),
+        ('DepositRequired', 'Deposit Required'),
         ('Confirmed', 'Confirmed'),
-        ('Awaiting Deposit', 'Awaiting Deposit'),
-        ('Deposit Paid', 'Deposit Paid'),
-        ('Awaiting Contract', 'Awaiting Contract'),
-        ('contractSigned', 'Contract Signed'),
-        ('Awaiting Final Payment', 'Awaiting Final Payment'),
-        ('Final Payment Paid', 'Final Payment Paid'),
         ('Ongoing', 'Ongoing'),
         ('Finished', 'Finished'),
+        ('Canceled', 'Canceled'),
     ]
 
     PROPOSED_BY_CHOICES = [('Owner', 'Owner'), ('Renter', 'Renter')]
@@ -24,7 +19,7 @@ class Rental(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='rentals')
     start_date = models.DateField()
     end_date = models.DateField()
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Pending')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PendingOwnerConfirmation')
     rental_type = models.CharField(max_length=20, choices=[('WithDriver', 'With Driver'), ('WithoutDriver', 'Without Driver')], default='WithDriver')
     # مواقع التقاط السيارة والتوصيل
     pickup_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -34,6 +29,12 @@ class Rental(models.Model):
     pickup_address = models.CharField(max_length=255, null=True, blank=True)
     dropoff_address = models.CharField(max_length=255, null=True, blank=True)
     payment_method = models.CharField(max_length=10, choices=[('wallet', 'Wallet'), ('visa', 'Visa/Mastercard'), ('cash', 'Cash')], default='cash')
+    
+    # Selected card for automatic payments (like self-drive)
+    selected_card = models.ForeignKey('payments.SavedCard', on_delete=models.SET_NULL, null=True, blank=True, 
+                                     related_name='regular_rentals', 
+                                     help_text="Pre-selected card for deposit and remaining payments")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
@@ -60,11 +61,12 @@ class RentalPayment(models.Model):
 
     rental = models.OneToOneField(Rental, on_delete=models.CASCADE, related_name='payment_info')
 
-    # 1. Deposit
+    # 1. Deposit (same as self-drive)
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     deposit_paid_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='Pending')
     deposit_paid_at = models.DateTimeField(null=True, blank=True)
     deposit_transaction_id = models.CharField(max_length=100, null=True, blank=True)
+    deposit_due_at = models.DateTimeField(null=True, blank=True, help_text="Deposit payment deadline (like self-drive)")
     deposit_refunded_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='Pending')
     deposit_refunded_at = models.DateTimeField(null=True, blank=True)
     deposit_refund_transaction_id = models.CharField(max_length=100, null=True, blank=True)
@@ -74,6 +76,12 @@ class RentalPayment(models.Model):
     remaining_paid_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='Pending')
     remaining_paid_at = models.DateTimeField(null=True, blank=True)
     remaining_transaction_id = models.CharField(max_length=100, null=True, blank=True)
+
+    # 3. Excess Amount (like self-drive) - for end-of-trip extra charges
+    excess_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Extra charges at end of trip")
+    excess_paid_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='Pending')
+    excess_paid_at = models.DateTimeField(null=True, blank=True)
+    excess_transaction_id = models.CharField(max_length=100, null=True, blank=True)
 
     # 3. Limits Excess Insurance
     limits_excess_insurance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -178,9 +186,13 @@ class RentalLog(models.Model):
 
 class RentalBreakdown(models.Model):
     rental = models.OneToOneField(Rental, on_delete=models.CASCADE, related_name='breakdown')
+    
+    # ===== INITIAL PLANNING =====
     planned_km = models.FloatField(default=0)
-    total_waiting_minutes = models.IntegerField(default=0)
+    total_waiting_minutes = models.IntegerField(default=0, help_text="Planned waiting minutes")
     daily_price = models.FloatField(default=0)
+    
+    # ===== BASIC COSTS =====
     extra_km_cost = models.FloatField(default=0)
     waiting_cost = models.FloatField(default=0)
     total_cost = models.FloatField(default=0)
@@ -190,10 +202,38 @@ class RentalBreakdown(models.Model):
     allowed_km = models.FloatField(default=0)
     extra_km = models.FloatField(default=0)
     base_cost = models.FloatField(default=0)
-    final_cost = models.FloatField(default=0)
+    final_cost = models.FloatField(default=0, help_text="Final cost without end-of-trip excess")
     commission_rate = models.FloatField(default=0.2)
+    
+    # ===== END-OF-TRIP EXCESS (like self-drive) =====
+    actual_total_waiting_minutes = models.IntegerField(default=0, help_text="Actual waiting minutes at end of trip")
+    extra_waiting_minutes = models.IntegerField(default=0, help_text="Extra waiting beyond planned")
+    excess_waiting_cost = models.FloatField(default=0, help_text="Cost of extra waiting")
+    
+    # ===== FINAL TOTALS =====
+    final_total_cost = models.FloatField(default=0, help_text="Final cost including all excess charges")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Breakdown for Rental #{self.rental.id}"
+        
+    @property
+    def has_excess_charges(self):
+        """Check if there are any excess charges"""
+        return self.excess_waiting_cost > 0
+        
+    @property
+    def excess_summary(self):
+        """Summary of excess charges"""
+        if not self.has_excess_charges:
+            return {"message": "No excess charges"}
+        
+        return {
+            "extra_waiting_minutes": self.extra_waiting_minutes,
+            "excess_waiting_cost": self.excess_waiting_cost,
+            "original_cost": self.final_cost,
+            "final_total_cost": self.final_total_cost,
+            "message": f"Extra {self.extra_waiting_minutes} minutes = {self.excess_waiting_cost} EGP"
+        }

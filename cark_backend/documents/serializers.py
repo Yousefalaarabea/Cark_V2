@@ -54,7 +54,7 @@ class DocumentVerificationSerializer(serializers.ModelSerializer):
                 'verified_by': "Must be an admin user (is_staff=True) for Admin verification."
             })
 
-        if document and not Document.objects.filter(id=document.id).exists():
+        if document and not Document.objects.filter(id=document.id).exists():  # type: ignore
             raise serializers.ValidationError({
                 'document': "The related document does not exist."
             })
@@ -77,7 +77,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     document_type_name = serializers.CharField(write_only=True)
     document_type = serializers.PrimaryKeyRelatedField(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
-    car = serializers.PrimaryKeyRelatedField(queryset=Car.objects.all(), required=False)
+    car = serializers.PrimaryKeyRelatedField(queryset=Car.objects.all(), required=False)  # type: ignore
     verifications = DocumentVerificationSerializer(many=True, read_only=True)
 
 
@@ -112,17 +112,17 @@ class DocumentSerializer(serializers.ModelSerializer):
         document_type_name = validated_data.pop('document_type_name', None)
 
         try:
-            document_type = DocumentType.objects.get(name__iexact=document_type_name)
-        except DocumentType.DoesNotExist:
+            document_type = DocumentType.objects.get(name__iexact=document_type_name)  # type: ignore
+        except DocumentType.DoesNotExist:  # type: ignore
             raise serializers.ValidationError({'document_type_name': 'Invalid document type name'})
         
         
         car = validated_data.get('car')
         # ✅ التحقق من عدم رفع نفس نوع المستند سابقًا
         if car:
-            exists = Document.objects.filter(car=car, document_type=document_type).exists()
+            exists = Document.objects.filter(car=car, document_type=document_type).exists()  # type: ignore
         else:
-            exists = Document.objects.filter(user=user, document_type=document_type).exists()
+            exists = Document.objects.filter(user=user, document_type=document_type).exists()  # type: ignore
 
         if exists:
             raise serializers.ValidationError({'detail': 'This document has already been uploaded.'})
@@ -135,7 +135,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         expiry_date = upload_date + timedelta(days=365)
 
         # إنشاء المستند إما مع user أو مع car
-        document = Document.objects.create(
+        document = Document.objects.create(  # type: ignore
             user=user if validated_data.get('car') is None else None,
             car=validated_data.get('car'),
             document_type=document_type,
@@ -145,7 +145,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         )
 
         # إنشاء الـ verifications تلقائيًا
-        DocumentVerification.objects.bulk_create([
+        DocumentVerification.objects.bulk_create([  # type: ignore
             DocumentVerification(document=document, verification_type='ML', status='Pending'),
             DocumentVerification(document=document, verification_type='Admin', status='Pending'),
         ])

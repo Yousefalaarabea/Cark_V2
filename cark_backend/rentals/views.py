@@ -9,6 +9,9 @@ from cars.models import Car
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
+from datetime import timedelta
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 def home(request):
     return HttpResponse("Welcome to Rentals Home!")
@@ -86,55 +89,342 @@ class RentalViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def confirm_booking(self, request, pk=None):
+        """
+        تأكيد الحجز من المالك فقط (بدون دفع)
+        الخطوات التالية: المالك → تأكيد → المستأجر يدفع العربون
+        """
         rental = self.get_object()
-        if rental.status != 'Pending':
-            return Response({'error': 'Cannot confirm booking unless status is Pending.'}, status=400)
-        rental.status = 'Confirmed'
+        if rental.status != 'PendingOwnerConfirmation':
+            return Response({
+                'error_code': 'INVALID_STATUS', 
+                'error_message': 'Cannot confirm booking unless status is PendingOwnerConfirmation.'
+            }, status=400)
+        
+        # Check owner permission
+        if rental.car.owner != request.user:
+            return Response({
+                'error_code': 'NOT_OWNER', 
+                'error_message': 'Only car owner can confirm booking.'
+            }, status=403)
+        
+        # Change status to require deposit payment
+        old_status = rental.status
+        rental.status = 'DepositRequired'
         rental.save()
-        RentalLog.objects.create(rental=rental, event='Booking confirmed', performed_by_type='Owner', performed_by=request.user)
         
-        # --- منطق دفع الديبوزيت والريفاندبل بافر ---
-        payment_status = {
-            'deposit': 'Not required',
-        }
+        # Set deposit due date (24 hours)
+        from .models import RentalPayment
+        payment, _ = RentalPayment.objects.get_or_create(rental=rental)
+        payment.deposit_due_at = timezone.now() + timedelta(days=1)
+        payment.save()
         
-        if hasattr(rental, 'breakdown'):
-            deposit_amount = rental.breakdown.deposit
-            
-            if rental.payment_method == 'visa':
-                from .models import RentalPayment
-                payment, _ = RentalPayment.objects.get_or_create(rental=rental)
-                payment.payment_method = rental.payment_method
-                
-                # دفع الديبوزيت
-                if deposit_amount > 0:
-                    success = dummy_charge_visa(rental.renter, deposit_amount)
-                    if success:
-                        payment.deposit_amount = deposit_amount
-                        payment.deposit_paid_status = 'Paid'
-                        payment.deposit_paid_at = timezone.now()
-                        payment.deposit_transaction_id = 'dummy_deposit_txn'
-                        payment_status['deposit'] = 'Paid'
-                    else:
-                        payment.deposit_paid_status = 'Failed'
-                        payment_status['deposit'] = 'Failed'
-                
-                payment.save()
-            else:
-                payment_status['deposit'] = 'Not required (not visa)'
-        else:
-            payment_status['deposit'] = 'No breakdown found'
-            
+        # Log the confirmation
+        RentalLog.objects.create(
+            rental=rental, 
+            event='Booking confirmed by owner', 
+            performed_by_type='Owner', 
+            performed_by=request.user
+        )
+        
         return Response({
-            'status': 'Booking confirmed.',
-            'payment_status': payment_status
-        })
+            'status': 'Booking confirmed by owner.',
+            'message': 'Renter must pay deposit within 24 hours.',
+            'old_status': old_status,
+            'new_status': rental.status,
+            'deposit_due_at': payment.deposit_due_at
+                 })
+
+    @action(detail=True, methods=['post'])
+    def deposit_payment(self, request, pk=None):
+        """
+        دفع العربون بكارت محفوظ (نفس نظام self-drive)
+        صفحة منفصلة بطرق دفع منفصلة
+        """
+        rental = self.get_object()
+        
+        # ===== BASIC VALIDATIONS (same as self-drive) =====
+        
+        # 1. Check if owner confirmed first
+        if rental.status != 'DepositRequired':
+            return Response({
+                'error_code': 'OWNER_CONFIRMATION_REQUIRED',
+                'error_message': f'يجب أن يؤكد مالك السيارة الحجز أولاً قبل دفع العربون. الحالة الحالية: {rental.status}'
+            }, status=400)
+        
+        # 2. Check user is renter
+        if rental.renter != request.user:
+            return Response({
+                'error_code': 'NOT_RENTER',
+                'error_message': 'يجب أن تكون المستأجر في هذا الحجز.'
+            }, status=403)
+        
+        # 3. Check if already paid - get payment record
+        from .models import RentalPayment
+        try:
+            payment = RentalPayment.objects.get(rental=rental)
+            if payment.deposit_paid_status == 'Paid':
+                return Response({
+                    'error_code': 'ALREADY_PAID',
+                    'error_message': 'تم دفع العربون بالفعل ولا يمكن دفعه مرة أخرى.',
+                    'transaction_id': payment.deposit_transaction_id,
+                    'paid_at': payment.deposit_paid_at
+                }, status=400)
+        except RentalPayment.DoesNotExist:
+            payment = RentalPayment.objects.create(rental=rental)
+        
+        # 4. Check breakdown exists and deposit amount
+        if not hasattr(rental, 'breakdown'):
+            return Response({
+                'error_code': 'PAYMENT_NOT_FOUND',
+                'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'
+            }, status=400)
+        
+        deposit_amount = rental.breakdown.deposit
+        
+        # ===== REQUEST VALIDATION (same as self-drive) =====
+        
+        # Get and validate payment details
+        payment_method = request.data.get('payment_method')
+        saved_card_id = request.data.get('saved_card_id')
+        amount_cents = request.data.get('amount_cents')
+        payment_type = request.data.get('type', 'deposit')  # deposit/remaining/excess
+        
+        # Only handle saved_card deposit payments (same as self-drive)
+        if payment_method == 'saved_card' and saved_card_id and amount_cents and payment_type == 'deposit':
+            try:
+                # --- VALIDATION (same as self-drive) ---
+                from payments.models import SavedCard
+                from payments.services.payment_gateway import pay_with_saved_card_gateway
+                
+                # 1. Check card exists and belongs to user
+                try:
+                    card = SavedCard.objects.get(id=saved_card_id, user=request.user)
+                except SavedCard.DoesNotExist:
+                    return Response({
+                        'error_code': 'CARD_NOT_FOUND',
+                        'error_message': 'الكارت غير موجود أو لا يخصك.'
+                    }, status=404)
+                
+                # 2. Check deposit amount matches required amount
+                if not hasattr(payment, 'deposit_amount') or not payment.deposit_amount:
+                    payment.deposit_amount = deposit_amount
+                    payment.save()
+                
+                required_cents = int(round(float(payment.deposit_amount) * 100))
+                if int(amount_cents) != required_cents:
+                    return Response({
+                        'error_code': 'INVALID_AMOUNT',
+                        'error_message': f'المبلغ المطلوب للعربون هو {required_cents} قرش.'
+                    }, status=400)
+                
+                # --- PAYMENT PROCESSING (same as self-drive) ---
+                result = pay_with_saved_card_gateway(int(amount_cents), request.user, card.token)
+                if not result['success']:
+                    return Response({
+                        'error_code': 'PAYMENT_FAILED',
+                        'error_message': result['message'],
+                        'details': result.get('charge_response')
+                    }, status=400)
+                
+                # Update payment status
+                payment.deposit_paid_status = 'Paid'
+                payment.deposit_paid_at = timezone.now()
+                payment.deposit_transaction_id = result['transaction_id']
+                payment.payment_method = 'visa'  # Same as self-drive
+                payment.save()
+                
+                # Change rental status from DepositRequired to Confirmed
+                old_status = rental.status
+                rental.status = 'Confirmed'
+                rental.save()
+                
+                # Log the status change
+                from .models import RentalLog
+                RentalLog.objects.create(
+                    rental=rental,
+                    event='Deposit payment completed',
+                    performed_by_type='Renter',
+                    performed_by=request.user
+                )
+                
+                # Return success response (same format as self-drive)
+                from .serializers import RentalPaymentSerializer
+                return Response({
+                    'status': 'deposit payment processed successfully.',
+                    'transaction_id': result['transaction_id'],
+                    'payment': RentalPaymentSerializer(payment).data,
+                    'paymob_details': result,
+                    'old_status': old_status,
+                    'new_status': rental.status
+                })
+                
+            except Exception as e:
+                return Response({
+                    'error_code': 'PAYMENT_ERROR',
+                    'error_message': str(e)
+                }, status=500)
+
+        # Default response for invalid payment method (same as self-drive)
+        return Response({
+            'error_code': 'INVALID_PAYMENT_METHOD', 
+            'error_message': 'طريقة الدفع غير صحيحة أو بيانات مفقودة. يجب استخدام saved_card مع saved_card_id و amount_cents.',
+            'required_parameters': {
+                'payment_method': 'saved_card',
+                'saved_card_id': 'integer',
+                'amount_cents': 'integer',
+                'type': 'deposit'
+            }
+        }, status=400)
+
+    @action(detail=True, methods=['post'])
+    def new_card_deposit_payment(self, request, pk=None):
+        """
+        دفع العربون بكارت جديد (مثل self-drive)
+        يتم استدعاؤها بعد confirm_booking
+        """
+        rental = self.get_object()
+        
+        # ===== BASIC VALIDATIONS (same as deposit_payment) =====
+        
+        # 1. Check if owner confirmed first
+        if rental.status != 'DepositRequired':
+            return Response({
+                'error_code': 'OWNER_CONFIRMATION_REQUIRED',
+                'error_message': f'Rental status must be DepositRequired, current status: {rental.status}'
+            }, status=400)
+        
+        # 2. Check user is renter
+        if rental.renter != request.user:
+            return Response({
+                'error_code': 'NOT_RENTER',
+                'error_message': 'Only renter can pay deposit.'
+            }, status=403)
+        
+        # 3. Check if already paid - get payment record
+        from .models import RentalPayment
+        try:
+            payment = RentalPayment.objects.get(rental=rental)
+            if payment.deposit_paid_status == 'Paid':
+                return Response({
+                    'error_code': 'ALREADY_PAID',
+                    'error_message': 'Deposit has already been paid.',
+                    'transaction_id': payment.deposit_transaction_id,
+                    'paid_at': payment.deposit_paid_at
+                }, status=400)
+        except RentalPayment.DoesNotExist:
+            payment = RentalPayment.objects.create(rental=rental)
+        
+        # 4. Check breakdown exists and deposit amount
+        if not hasattr(rental, 'breakdown'):
+            return Response({
+                'error_code': 'BREAKDOWN_NOT_FOUND',
+                'error_message': 'Rental breakdown not found. Please calculate costs first.'
+            }, status=400)
+        
+        deposit_amount = rental.breakdown.deposit
+        if not deposit_amount or float(deposit_amount) <= 0:
+            return Response({
+                'error_code': 'NO_DEPOSIT_REQUIRED',
+                'error_message': 'No deposit is required for this rental.',
+                'deposit_amount': deposit_amount
+            }, status=400)
+        
+        # 5. Check deposit due date
+        if hasattr(payment, 'deposit_due_at') and payment.deposit_due_at:
+            if timezone.now() > payment.deposit_due_at:
+                return Response({
+                    'error_code': 'DEPOSIT_EXPIRED',
+                    'error_message': 'Deposit payment deadline has expired.',
+                    'due_date': payment.deposit_due_at
+                }, status=400)
+        
+        # 6. Check rental payment method - all payment methods now support deposit
+        # Even cash rentals require electronic deposit payment
+        
+        # Special validation for wallet rentals (not implemented for new cards)
+        if rental.payment_method == 'wallet':
+            return Response({
+                'error_code': 'WALLET_PAYMENT_NOT_IMPLEMENTED',
+                'error_message': 'Wallet deposit payments with new cards are not yet implemented.',
+                'rental_payment_method': rental.payment_method,
+                'suggestion': 'Please use visa payment method or saved card deposit.'
+            }, status=501)
+        
+        # ===== REQUEST VALIDATION =====
+        
+        # 7. Get and validate amount_cents
+        amount_cents = request.data.get('amount_cents')
+        if not amount_cents:
+            return Response({
+                'error_code': 'MISSING_AMOUNT',
+                'error_message': 'amount_cents is required.'
+            }, status=400)
+        
+        # 7. Validate amount_cents format
+        try:
+            amount_cents = int(amount_cents)
+            if amount_cents <= 0:
+                raise ValueError("Amount must be positive")
+        except (ValueError, TypeError):
+            return Response({
+                'error_code': 'INVALID_AMOUNT_FORMAT',
+                'error_message': 'amount_cents must be a positive integer.'
+            }, status=400)
+        
+        # 8. Check amount matches required deposit  
+        required_cents = int(round(float(deposit_amount) * 100))
+        if amount_cents != required_cents:
+            return Response({
+                'error_code': 'INVALID_AMOUNT',
+                'error_message': f'Amount mismatch. Required: {required_cents} cents, Provided: {amount_cents} cents.',
+                'required_amount_cents': required_cents,
+                'required_amount_egp': float(deposit_amount),
+                'provided_amount_cents': amount_cents,
+                'provided_amount_egp': amount_cents / 100
+            }, status=400)
+        
+        # ===== PAYMENT INTENT CREATION =====
+        try:
+            
+            # Create payment intent for new card
+            from payments.services.paymob import create_payment_intent_for_deposit
+            intent_response = create_payment_intent_for_deposit(
+                amount_cents=int(amount_cents),
+                user=request.user,
+                rental_id=rental.id
+            )
+            
+            if not intent_response.get('success'):
+                return Response({
+                    'error_code': 'PAYMENT_INTENT_FAILED',
+                    'error_message': intent_response.get('message', 'Failed to create payment intent.')
+                }, status=400)
+            
+            # Return iframe URL for payment
+            return Response({
+                'status': 'Payment intent created successfully.',
+                'iframe_url': intent_response['iframe_url'],
+                'rental_id': rental.id,
+                'amount_cents': amount_cents,
+                'required_amount_cents': required_cents,
+                'message': 'Complete payment using the provided iframe URL.'
+            })
+            
+        except Exception as e:
+            return Response({
+                'error_code': 'PAYMENT_ERROR',
+                'error_message': str(e)
+            }, status=500)
 
     @action(detail=True, methods=['post'])
     def start_trip(self, request, pk=None):
         rental = self.get_object()
         if rental.status != 'Confirmed':
-            return Response({'error': 'Trip can only be started after booking is confirmed.'}, status=400)
+            return Response({
+                'error_code': 'INVALID_STATUS',
+                'error_message': 'Trip can only be started after deposit is paid and booking is confirmed.',
+                'current_status': rental.status
+            }, status=400)
         from .models import RentalPayment
         payment, _ = RentalPayment.objects.get_or_create(rental=rental)
         payment.payment_method = rental.payment_method
@@ -240,90 +530,92 @@ class RentalViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def end_trip(self, request, pk=None):
+        """
+        إنهاء الرحلة وحساب الزيادات (زي self-drive)
+        """
         rental = self.get_object()
         if rental.status != 'Ongoing':
             return Response({'error': 'Trip can only be ended if it is ongoing.'}, status=400)
+            
         from .models import RentalPayment, PlannedTripStop
         payment, _ = RentalPayment.objects.get_or_create(rental=rental)
         planned_stops = PlannedTripStop.objects.filter(planned_trip__rental_id=rental.id)
+        
         # تحقق من إنهاء الانتظار في آخر محطة
         if planned_stops.exists():
             last_stop = planned_stops.order_by('-stop_order').first()
             if not last_stop.waiting_ended_at:
                 return Response({'error': 'You must end waiting at the last stop before ending the trip.'}, status=400)
-        actual_total_waiting_minutes = sum([float(stop.actual_waiting_minutes) for stop in planned_stops])
-        planned_total_waiting_minutes = sum([float(stop.approx_waiting_time_minutes) for stop in planned_stops])
-        extra_waiting_minutes = actual_total_waiting_minutes - planned_total_waiting_minutes
+        
+        # حساب الزيادات (زي self-drive)
+        actual_total_waiting_minutes = int(sum([float(stop.actual_waiting_minutes) for stop in planned_stops]))
+        planned_total_waiting_minutes = int(sum([float(stop.approx_waiting_time_minutes) for stop in planned_stops]))
+        extra_waiting_minutes = max(0, actual_total_waiting_minutes - planned_total_waiting_minutes)
+        
         car = rental.car
         extra_hour_cost = float(car.usage_policy.extra_hour_cost or 0)
-        extra_cost = max(0, extra_waiting_minutes) * (extra_hour_cost / 60)
+        excess_amount = extra_waiting_minutes * (extra_hour_cost / 60)
+        
+        # التكلفة النهائية = التكلفة الأصلية + الزيادات
         base_final_cost = float(rental.breakdown.final_cost)
-        rental_total_amount = base_final_cost + float(extra_cost)
-        payment.rental_total_amount = rental_total_amount
-        details = {
-            'base_final_cost': base_final_cost,
-            'extra_waiting_minutes': extra_waiting_minutes,
-            'extra_cost': extra_cost,
-            'rental_total_amount': rental_total_amount
-        }
+        final_amount = base_final_cost + excess_amount
+        
+        # تحديث breakdown بتفاصيل الزيادات (واضح ومنظم)
+        breakdown = rental.breakdown
+        breakdown.actual_total_waiting_minutes = actual_total_waiting_minutes
+        breakdown.extra_waiting_minutes = extra_waiting_minutes
+        breakdown.excess_waiting_cost = excess_amount
+        breakdown.final_total_cost = final_amount
+        breakdown.save()
+        
+        # تحديث بيانات الدفع
+        payment.excess_amount = excess_amount
+        payment.rental_total_amount = final_amount
+        payment.save()
+        
+        # منطق الدفع حسب نوع الرحلة (زي self-drive)
         if rental.payment_method in ['visa', 'wallet']:
-            limits = float(payment.limits_excess_insurance_amount)
-            if extra_cost > 0:
-                if extra_cost >= limits:
-                    payment.limits_refunded_status = 'No Remaining to Refund'
-                    payment.limits_refunded_at = timezone.now()
-                    payment.limits_refund_transaction_id = 'excess_fully_consumed'
-                    refund = 0
-                    details['limits_excess_used'] = limits
-                    details['limits_refunded'] = 0
-                    details['limits_shortfall'] = float(extra_cost) - limits
+            # للرحلات الإلكترونية: الزيادات تتدفع إلكترونياً
+            if excess_amount > 0:
+                # محتاج يدفع الزيادة إلكترونياً (simulate payment)
+                success = dummy_charge_visa_or_wallet(request.user, excess_amount, rental.payment_method)
+                if success:
+                    message = f'Excess amount {excess_amount} EGP charged electronically.'
                 else:
-                    payment.limits_refunded_status = 'Refunded'
-                    payment.limits_refunded_at = timezone.now()
-                    payment.limits_refund_transaction_id = 'partial_refund'
-                    refund = limits - float(extra_cost)
-                    details['limits_excess_used'] = float(extra_cost)
-                    details['limits_refunded'] = refund
-                    details['limits_shortfall'] = 0
+                    return Response({'error': 'Failed to charge excess amount electronically.'}, status=400)
             else:
-                payment.limits_refunded_status = 'Refunded'
-                payment.limits_refunded_at = timezone.now()
-                payment.limits_refund_transaction_id = 'full_refund'
-                refund = limits
-                details['limits_excess_used'] = 0
-                details['limits_refunded'] = refund
-                details['limits_shortfall'] = 0
-            payment.save()
-            rental.status = 'Finished'
-            rental.save()
-            user = request.user if request.user.is_authenticated else None
-            RentalLog.objects.create(rental=rental, event='Trip ended', performed_by_type='Owner', performed_by=user)
-            return Response({
-                'status': 'Trip ended. Final billing processed.',
-                'payment_method': rental.payment_method,
-                'rental_total_amount': rental_total_amount,
-                'limits_excess_insurance_amount': limits,
-                'limits_excess_used': details['limits_excess_used'],
-                'limits_refunded': details['limits_refunded'],
-                'limits_shortfall': details['limits_shortfall'],
-                'extra_waiting_minutes': extra_waiting_minutes,
-                'extra_cost': extra_cost,
-                'message': 'Refund processed to renter.' if details['limits_refunded'] > 0 else 'All buffer consumed for extra charges.'
-            })
+                message = 'No excess charges.'
+                
         else:
-            rental.status = 'Finished'
-            rental.save()
-            user = request.user if request.user.is_authenticated else None
-            RentalLog.objects.create(rental=rental, event='Trip ended', performed_by_type='Owner', performed_by=user)
-            return Response({
-                'status': 'Trip ended. Final billing processed.',
-                'payment_method': rental.payment_method,
-                'rental_total_amount': rental_total_amount,
-                'amount_driver_should_collect': rental_total_amount,
-                'extra_waiting_minutes': extra_waiting_minutes,
-                'extra_cost': extra_cost,
-                'message': 'Driver should collect the total from the renter.'
-            })
+            # للرحلات الكاش: Owner يحصل الـ remaining + excess كاش
+            remaining_amount = float(payment.remaining_amount or 0)
+            cash_to_collect = remaining_amount + excess_amount
+            message = f'Owner should collect {cash_to_collect} EGP cash (remaining: {remaining_amount}, excess: {excess_amount}).'
+        
+        # إنهاء الرحلة
+        rental.status = 'Finished'
+        rental.save()
+        
+        # تسجيل العملية
+        user = request.user if request.user.is_authenticated else None
+        RentalLog.objects.create(
+            rental=rental, 
+            event='Trip ended', 
+            performed_by_type='Owner', 
+            performed_by=user
+        )
+        
+        return Response({
+            'status': 'Trip ended successfully.',
+            'payment_method': rental.payment_method,
+            'base_cost': base_final_cost,
+            'excess_amount': excess_amount,
+            'final_amount': final_amount,
+            'extra_waiting_minutes': extra_waiting_minutes,
+            'remaining_amount': float(payment.remaining_amount or 0),
+            'cash_to_collect': remaining_amount + excess_amount if rental.payment_method == 'cash' else 0,
+            'message': message
+        })
 
     @action(detail=True, methods=['post'])
     def payout(self, request, pk=None):
@@ -388,3 +680,155 @@ def create_rental_breakdown(rental, planned_km, total_waiting_minutes):
 def dummy_charge_visa_or_wallet(user, amount, method):
     print(f'[DUMMY] Charging {amount} from {user.username} using {method}...')
     return True  # دائماً ناجح (أو أرجع False للتجربة)
+
+class NewCardDepositPaymentView(APIView):
+    """
+    دفع العربون بكارت جديد للـ regular rentals (نفس نظام self-drive)
+    POST /api/rentals/{{rental_id}}/new_card_deposit_payment/
+    """
+    # permission_classes = [IsAuthenticated]  # مُعطل مؤقتاً للاختبار
+
+    def post(self, request, rental_id):
+        """
+        يبدأ عملية دفع الديبوزيت بكارت جديد (يرجع رابط iframe فقط)
+        """
+        user = request.user
+        amount_cents = request.data.get('amount_cents')
+        payment_method = request.data.get('payment_method')
+        payment_type = request.data.get('type', 'deposit')
+        
+        # تحقق من كل الفحوصات المطلوبة
+        from .models import Rental
+        rental = get_object_or_404(Rental, id=rental_id)
+        
+        # تأكد أن المالك أكد الحجز أولاً
+        if rental.status != 'DepositRequired':
+            return Response({
+                'error_code': 'OWNER_CONFIRMATION_REQUIRED', 
+                'error_message': 'يجب أن يؤكد مالك السيارة الحجز أولاً قبل دفع العربون.'
+            }, status=400)
+        
+        if rental.renter != user:
+            return Response({
+                'error_code': 'NOT_RENTER', 
+                'error_message': 'يجب أن تكون المستأجر في هذا الحجز.'
+            }, status=403)
+            
+        # Get or create payment record
+        from .models import RentalPayment
+        try:
+            payment = RentalPayment.objects.get(rental=rental)
+        except RentalPayment.DoesNotExist:
+            payment = RentalPayment.objects.create(rental=rental)
+        
+        if not payment or not hasattr(rental, 'breakdown'):
+            return Response({
+                'error_code': 'PAYMENT_NOT_FOUND', 
+                'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'
+            }, status=400)
+            
+        # Set deposit amount if not set
+        if not hasattr(payment, 'deposit_amount') or not payment.deposit_amount:
+            payment.deposit_amount = rental.breakdown.deposit
+            payment.save()
+            
+        required_cents = int(round(float(payment.deposit_amount) * 100))
+        if not amount_cents or int(amount_cents) != required_cents:
+            return Response({
+                'error_code': 'INVALID_AMOUNT', 
+                'error_message': f'المبلغ المطلوب للعربون هو {required_cents} قرش.'
+            }, status=400)
+            
+        if payment.deposit_paid_status == 'Paid':
+            return Response({
+                'error_code': 'ALREADY_PAID', 
+                'error_message': 'تم دفع العربون بالفعل.'
+            }, status=400)
+            
+        if payment_method != 'new_card':
+            return Response({
+                'error_code': 'INVALID_METHOD', 
+                'error_message': 'طريقة الدفع يجب أن تكون new_card.'
+            }, status=400)
+            
+        # تنفيذ منطق Paymob للبطاقات الجديدة (نفس self-drive)
+        try:
+            from payments.services import paymob
+            from django.conf import settings
+            
+            auth_token = paymob.get_auth_token()
+            import uuid
+            reference = str(uuid.uuid4())
+            user_id = str(user.id)
+            merchant_order_id_with_user = f"{reference}_{user_id}"
+            order_id = paymob.create_order(auth_token, amount_cents, merchant_order_id_with_user)
+            integration_id = settings.PAYMOB_INTEGRATION_ID_CARD
+            
+            billing_data = {
+                "apartment": "NA",
+                "email": getattr(user, 'email', None) or "user@example.com",
+                "floor": "NA",
+                "first_name": getattr(user, 'first_name', None) or "Guest",
+                "street": "NA",
+                "building": "NA",
+                "phone_number": getattr(user, 'phone_number', "01000000000"),
+                "shipping_method": "NA",
+                "postal_code": "NA",
+                "city": "Cairo",
+                "country": "EG",
+                "last_name": getattr(user, 'last_name', None) or "User",
+                "state": "EG"
+            }
+            
+            payment_token = paymob.get_payment_token(
+                auth_token, order_id, amount_cents, billing_data, integration_id
+            )
+            
+            iframe_url = f"https://accept.paymob.com/api/acceptance/iframes/{settings.PAYMOB_IFRAME_ID}?payment_token={payment_token}"
+            
+            # حفظ order_id في payment لتتبع العملية
+            payment.deposit_transaction_id = order_id  # مؤقتًا لتتبع العملية
+            payment.save()
+            
+            return Response({
+                'iframe_url': iframe_url,
+                'order_id': order_id,
+                'message': 'يرجى إكمال الدفع عبر الرابط'
+            })
+            
+        except Exception as e:
+            return Response({
+                'error_code': 'PAYMOB_ERROR', 
+                'error_message': str(e)
+            }, status=500)
+
+    def get(self, request, rental_id):
+        """
+        يرجع حالة الدفع وتفاصيل آخر عملية
+        """
+        user = request.user
+        from .models import Rental
+        rental = get_object_or_404(Rental, id=rental_id)
+        
+        if rental.renter != user:
+            return Response({
+                'error_code': 'NOT_RENTER', 
+                'error_message': 'يجب أن تكون المستأجر في هذا الحجز.'
+            }, status=403)
+            
+        from .models import RentalPayment
+        try:
+            payment = RentalPayment.objects.get(rental=rental)
+        except RentalPayment.DoesNotExist:
+            return Response({
+                'error_code': 'PAYMENT_NOT_FOUND', 
+                'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'
+            }, status=400)
+            
+        from .serializers import RentalPaymentSerializer
+        return Response({
+            'deposit_paid_status': payment.deposit_paid_status,
+            'deposit_paid_at': payment.deposit_paid_at,
+            'deposit_transaction_id': payment.deposit_transaction_id,
+            'payment': RentalPaymentSerializer(payment).data,
+        })

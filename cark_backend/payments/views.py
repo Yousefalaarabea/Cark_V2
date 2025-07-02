@@ -360,9 +360,59 @@ def paymob_webhook(request):
                     payment_obj.deposit_paid_at = timezone.now()
                     payment_obj.deposit_transaction_id = transaction_id
                     payment_obj.save()
+                    # Update rental status to Confirmed
+                    payment_obj.rental.status = 'Confirmed'
+                    payment_obj.rental.save()
                     print(f"✅ SelfDrivePayment updated for deposit: {payment_obj.id}")
         except Exception as e:
             print(f"❌ Error updating SelfDrivePayment in webhook: {e}")
+            
+        # --- تحديث RentalPayment للعادي rentals عند نجاح دفع الديبوزيت بكارت جديد ---
+        try:
+            from rentals.models import RentalPayment
+            # Check if this is a regular rental deposit by looking at merchant_order_id
+            if merchant_order_id.startswith("rental_deposit_"):
+                paymob_order_id = order_data.get("id")
+                transaction_id = transaction_data.get("id")
+                amount_cents = int(transaction_data.get("amount_cents", 0))
+                
+                # Extract rental_id from merchant_order_id (format: rental_deposit_{rental_id}_{uuid}_{user_id})
+                merchant_parts = merchant_order_id.split('_')
+                if len(merchant_parts) >= 3:
+                    rental_id = merchant_parts[2]  # rental_id is the 3rd part
+                    
+                    # ابحث عن RentalPayment الذي يحمل deposit_transaction_id = order_id أو paymob_order_id
+                    payment_obj = RentalPayment.objects.filter(
+                        rental_id=rental_id,
+                        deposit_transaction_id=paymob_order_id
+                    ).first()
+                    
+                    if not payment_obj:
+                        # جرب البحث بالـ transaction_id أو بدون transaction_id
+                        payment_obj = RentalPayment.objects.filter(
+                            rental_id=rental_id,
+                            deposit_paid_status__in=['Pending', 'Failed']
+                        ).first()
+                        
+                    if payment_obj and amount_cents == int(round(float(payment_obj.deposit_amount) * 100)):
+                        if transaction_data.get("success", False):
+                            payment_obj.deposit_paid_status = 'Paid'
+                            payment_obj.deposit_paid_at = timezone.now()
+                            payment_obj.deposit_transaction_id = transaction_id
+                            payment_obj.save()
+                            
+                            # Update rental status to Confirmed
+                            payment_obj.rental.status = 'Confirmed'
+                            payment_obj.rental.save()
+                            print(f"✅ RentalPayment updated for deposit: {payment_obj.id}, rental: {rental_id}")
+                        else:
+                            payment_obj.deposit_paid_status = 'Failed'
+                            payment_obj.save()
+                            print(f"❌ RentalPayment deposit failed: {payment_obj.id}, rental: {rental_id}")
+                    else:
+                        print(f"⚠️ RentalPayment not found or amount mismatch for order {paymob_order_id}")
+        except Exception as e:
+            print(f"❌ Error updating RentalPayment in webhook: {e}")
         response_payload = {
             "message": "✅ Webhook processed successfully",
             "transaction_id": transaction_data.get("id"),

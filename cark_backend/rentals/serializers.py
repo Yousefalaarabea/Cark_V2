@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Rental, RentalPayment, PlannedTrip, PlannedTripStop, RentalBreakdown
 from cars.models import Car, CarRentalOptions, CarUsagePolicy
 from users.models import User
+from payments.models import SavedCard
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .services import dummy_charge_visa
@@ -11,6 +12,12 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'email', 'phone_number', 'first_name', 'last_name', 'national_id']
+
+# Serializer للكارت المحفوظ
+class SavedCardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedCard
+        fields = ['id', 'card_brand', 'card_last_four_digits', 'created_at']
 
 # Serializer لخيارات الإيجار للسيارة
 class CarRentalOptionsSerializer(serializers.ModelSerializer):
@@ -75,24 +82,27 @@ class RentalSerializer(serializers.ModelSerializer):
     planned_trip = PlannedTripSerializer(read_only=True)
     payment_info = RentalPaymentSerializer(read_only=True)
     breakdown = RentalBreakdownSerializer(read_only=True)
+    selected_card = SavedCardSerializer(read_only=True)
     class Meta:
         model = Rental
         fields = [
             'id', 'renter', 'car', 'start_date', 'end_date', 'status',
             'rental_type',
             'pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng', 'pickup_address', 'dropoff_address',
-            'payment_method', 'created_at', 'updated_at', 'planned_trip', 'payment_info', 'breakdown'
+            'payment_method', 'selected_card', 'created_at', 'updated_at', 'planned_trip', 'payment_info', 'breakdown'
         ]
 
 # Serializer لإنشاء/تحديث الحجز مع المحطات
 class RentalCreateUpdateSerializer(serializers.ModelSerializer):
     stops = PlannedTripStopSerializer(many=True, write_only=True)
+    selected_card_id = serializers.IntegerField(write_only=True, required=False, help_text="ID of the saved card to use for payments (Required for visa payment method)")
+    
     class Meta:
         model = Rental
         fields = [
             'car', 'start_date', 'end_date', 'rental_type',
             'pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng', 'pickup_address', 'dropoff_address',
-            'payment_method', 'stops'
+            'payment_method', 'selected_card_id', 'stops'
         ]
 
     def validate(self, data):
@@ -103,11 +113,54 @@ class RentalCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Start and end dates are required.')
         if not data.get('stops') or len(data.get('stops')) == 0:
             raise serializers.ValidationError('At least one stop is required.')
+        
+        # تحقق من selected_card_id validation
+        selected_card_id = data.get('selected_card_id')
+        payment_method = data.get('payment_method')
+        
+        # للـ visa payment: selected_card_id مطلوب إجبارياً
+        if payment_method == 'visa':
+            if not selected_card_id:
+                raise serializers.ValidationError({
+                    'selected_card_id': 'selected_card_id is required for visa payment method.'
+                })
+        
+        # للـ cash payment: selected_card_id ممنوع
+        elif payment_method == 'cash':
+            if selected_card_id:
+                raise serializers.ValidationError({
+                    'selected_card_id': 'selected_card_id is not allowed for cash payment method. Deposit payments are handled separately.'
+                })
+        
+        # تحقق من وجود الكارت إذا تم إدخاله (للـ visa فقط)
+        if selected_card_id:
+            try:
+                card = SavedCard.objects.get(id=selected_card_id)
+                # ملاحظة: user ownership سيتم التحقق منه في create method
+            except SavedCard.DoesNotExist:
+                raise serializers.ValidationError({
+                    'selected_card_id': f'SavedCard with id {selected_card_id} does not exist.'
+                })
+        
         return data
 
     def create(self, validated_data):
         stops_data = validated_data.pop('stops')
+        selected_card_id = validated_data.pop('selected_card_id', None)
+        
+        # Create rental
         rental = Rental.objects.create(**validated_data)
+        
+        # Set selected card if provided and validate ownership
+        if selected_card_id:
+            try:
+                card = SavedCard.objects.get(id=selected_card_id, user=self.context['request'].user)
+                rental.selected_card = card
+                rental.save()
+            except SavedCard.DoesNotExist:
+                raise serializers.ValidationError(f'SavedCard with id {selected_card_id} does not exist or does not belong to you.')
+        
+        # Create planned trip and stops
         planned_trip = PlannedTrip.objects.create(rental=rental)
         for stop in stops_data:
             PlannedTripStop.objects.create(planned_trip=planned_trip, **stop)

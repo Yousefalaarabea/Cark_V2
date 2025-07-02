@@ -8,5 +8,6 @@ router.register(r'rentals', views.RentalViewSet, basename='rental')
 urlpatterns = [
     path('', views.home, name='home'),  # مثال على رابط
     path('', include(router.urls)),
-    # أضف روابط أخرى هنا حسب الحاجة
+    # New card deposit payment API (same as self-drive)
+    path('rentals/<int:rental_id>/new_card_deposit_payment/', views.NewCardDepositPaymentView.as_view(), name='new_card_deposit_payment'),
 ]
