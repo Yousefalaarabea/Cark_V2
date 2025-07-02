@@ -40,7 +40,10 @@ class User(AbstractUser):
     national_id = models.CharField(max_length=14, unique=True, null=True, blank=True, help_text="Egyptian National ID number (14 digits)")
     
     #created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)      
+    updated_at = models.DateTimeField(auto_now=True)  
+    avg_rating = models.FloatField(default=0)
+    total_reviews = models.PositiveIntegerField(default=0)
+    reports_count = models.PositiveIntegerField(default=0)    
 
     objects = UserManager()
 
@@ -71,6 +74,8 @@ class UserRole(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
     assigned_at = models.DateTimeField(auto_now_add=True)
+    avg_rating = models.FloatField(default=0)
+    total_reviews = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.role.role_name}"
