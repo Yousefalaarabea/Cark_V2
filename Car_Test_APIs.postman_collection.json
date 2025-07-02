@@ -1,0 +1,804 @@
+{
+	"info": {
+		"_postman_id": "car-test-apis-collection",
+		"name": "Car Test APIs - Enhanced مراحل إضافة العربية",
+		"description": "APIs محدثة لتيست كل مرحلة من مراحل إضافة العربية مع فحص ذكي للتكرار ومقارنات السوق",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🚗 المرحلة الأولى - البيانات الأساسية",
+			"item": [
+				{
+					"name": "Test Basic Info - Valid Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Basic info is valid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(true);",
+									"    pm.expect(jsonData.stage).to.eql('basic_info');",
+									"    pm.expect(jsonData.next_step).to.eql('rental_options');",
+									"});",
+									"",
+									"pm.test(\"Enhanced features present\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('existing_car_check');",
+									"    pm.expect(jsonData).to.have.property('market_stats');",
+									"    pm.expect(jsonData.existing_car_check).to.have.property('plate_available');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"Camry\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"plate_number\": \"ABC123TEST\",\n  \"year\": 2020,\n  \"color\": \"أبيض\",\n  \"seating_capacity\": 5,\n  \"transmission_type\": \"Automatic\",\n  \"fuel_type\": \"Petrol\",\n  \"current_odometer_reading\": 50000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/basic-info/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "basic-info", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Basic Info - Invalid Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Basic info is invalid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(false);",
+									"    pm.expect(jsonData.errors).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"\",\n  \"brand\": \"\",\n  \"car_type\": \"InvalidType\",\n  \"year\": 1980,\n  \"seating_capacity\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/basic-info/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "basic-info", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "💰 المرحلة الثانية - خيارات الإيجار",
+			"item": [
+				{
+					"name": "Test Rental Options - Valid Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Rental options are valid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(true);",
+									"    pm.expect(jsonData.stage).to.eql('rental_options');",
+									"    pm.expect(jsonData.next_step).to.eql('usage_policy');",
+									"});",
+									"",
+									"pm.test(\"Market comparison features present\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('market_comparison');",
+									"    pm.expect(jsonData).to.have.property('pricing_tips');",
+									"    pm.expect(jsonData).to.have.property('user_price_history');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"available_without_driver\": true,\n  \"available_with_driver\": true,\n  \"daily_rental_price\": 300,\n  \"monthly_rental_price\": 7500,\n  \"yearly_rental_price\": 82500,\n  \"daily_rental_price_with_driver\": 570,\n  \"monthly_price_with_driver\": 14250\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/rental-options/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "rental-options", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Rental Options - Invalid Prices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Rental options are invalid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(false);",
+									"    pm.expect(jsonData.errors).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"available_without_driver\": true,\n  \"daily_rental_price\": -100,\n  \"daily_rental_price_with_driver\": 50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/rental-options/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "rental-options", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 المرحلة الثالثة - سياسة الاستخدام",
+			"item": [
+				{
+					"name": "Test Usage Policy - Valid Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Usage policy is valid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(true);",
+									"    pm.expect(jsonData.stage).to.eql('usage_policy');",
+									"    pm.expect(jsonData.next_step).to.eql('complete');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"daily_km_limit\": 250,\n  \"extra_km_cost\": 1.5,\n  \"daily_hour_limit\": 12,\n  \"extra_hour_cost\": 25,\n  \"daily_rental_price\": 300\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/usage-policy/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "usage-policy", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Usage Policy - Invalid Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Usage policy is invalid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(false);",
+									"    pm.expect(jsonData.errors).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"daily_km_limit\": -50,\n  \"extra_km_cost\": 0,\n  \"daily_hour_limit\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/usage-policy/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "usage-policy", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "✅ التيست النهائي الشامل",
+			"item": [
+				{
+					"name": "Test Complete Car - All Valid",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Complete car data is valid\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(true);",
+									"    pm.expect(jsonData.stage).to.eql('complete');",
+									"    pm.expect(jsonData.summary.ready_to_submit).to.eql(true);",
+									"    pm.expect(jsonData.next_action).to.eql('submit_car');",
+									"});",
+									"",
+									"pm.test(\"Cost preview is provided\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.cost_preview) {",
+									"        pm.expect(jsonData.cost_preview).to.have.property('daily_cost_per_km');",
+									"        pm.expect(jsonData.cost_preview).to.have.property('weekly_cost');",
+									"        pm.expect(jsonData.cost_preview).to.have.property('monthly_cost');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"Camry\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"plate_number\": \"COMPLETE123\",\n  \"year\": 2020,\n  \"color\": \"أبيض\",\n  \"seating_capacity\": 5,\n  \"transmission_type\": \"Automatic\",\n  \"fuel_type\": \"Petrol\",\n  \"current_odometer_reading\": 50000,\n  \"available_without_driver\": true,\n  \"available_with_driver\": true,\n  \"daily_rental_price\": 300,\n  \"monthly_rental_price\": 7500,\n  \"daily_rental_price_with_driver\": 570,\n  \"daily_km_limit\": 250,\n  \"extra_km_cost\": 1.5,\n  \"daily_hour_limit\": 12,\n  \"extra_hour_cost\": 25\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/complete/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "complete", ""]
+						}
+					}
+				},
+				{
+					"name": "Test Complete Car - Mixed Errors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Complete car data has errors\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(false);",
+									"    pm.expect(jsonData.summary.ready_to_submit).to.eql(false);",
+									"    pm.expect(jsonData.next_action).to.eql('fix_errors');",
+									"    pm.expect(jsonData.errors).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"InvalidType\",\n  \"year\": 1980,\n  \"available_without_driver\": true,\n  \"daily_rental_price\": -100,\n  \"daily_km_limit\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/complete/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "complete", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔍 APIs مساعدة محدثة",
+			"item": [
+				{
+					"name": "Enhanced Plate Check - With Suggestions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Enhanced plate check features\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('plate_number');",
+									"    pm.expect(jsonData).to.have.property('valid_format');",
+									"    pm.expect(jsonData).to.have.property('available');",
+									"    if (!jsonData.available && jsonData.existing_car) {",
+									"        pm.expect(jsonData.existing_car).to.have.property('owner_is_you');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plate_number\": \"TEST123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/plate-check/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "plate-check", ""]
+						}
+					}
+				},
+				{
+					"name": "Quick Plate Check - Available",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Plate number check response\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('plate_number');",
+									"    pm.expect(jsonData).to.have.property('valid_format');",
+									"    pm.expect(jsonData).to.have.property('available');",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plate_number\": \"TEST123PLATE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/plate-check/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "plate-check", ""]
+						}
+					}
+				},
+				{
+					"name": "Quick Plate Check - Invalid Format",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Plate number is invalid format\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid_format).to.eql(false);",
+									"    pm.expect(jsonData.status).to.include('تنسيق خاطئ');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plate_number\": \"!@#$%^&*()\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/plate-check/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "plate-check", ""]
+						}
+					}
+				},
+				{
+					"name": "Pricing Suggestions - Economy Sedan",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Pricing suggestions response\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('car_info');",
+									"    pm.expect(jsonData).to.have.property('suggested_prices');",
+									"    pm.expect(jsonData).to.have.property('suggested_policy');",
+									"    pm.expect(jsonData).to.have.property('price_range');",
+									"    pm.expect(jsonData).to.have.property('tips');",
+									"});",
+									"",
+									"pm.test(\"Suggested prices are reasonable\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    const dailyPrice = jsonData.suggested_prices.without_driver.daily;",
+									"    pm.expect(dailyPrice).to.be.above(0);",
+									"    pm.expect(dailyPrice).to.be.below(5000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"year\": 2020\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/pricing-suggestions/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "pricing-suggestions", ""]
+						}
+					}
+				},
+				{
+					"name": "Pricing Suggestions - Luxury SUV",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Luxury SUV has higher prices\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    const dailyPrice = jsonData.suggested_prices.without_driver.daily;",
+									"    pm.expect(dailyPrice).to.be.above(400); // Luxury should be more expensive",
+									"});",
+									"",
+									"pm.test(\"Driver price is higher than without driver\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    const withoutDriver = jsonData.suggested_prices.without_driver.daily;",
+									"    const withDriver = jsonData.suggested_prices.with_driver.daily;",
+									"    pm.expect(withDriver).to.be.above(withoutDriver);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"car_type\": \"SUV\",\n  \"car_category\": \"Luxury\",\n  \"year\": 2022\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/pricing-suggestions/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "pricing-suggestions", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧪 Workflow Tests - كامل التسلسل",
+			"item": [
+				{
+					"name": "Full Workflow - Step by Step",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Set unique plate number for this test",
+									"const timestamp = Date.now();",
+									"pm.globals.set('unique_plate', 'WORKFLOW' + timestamp);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// This is a workflow test that would typically be broken into multiple requests",
+									"pm.test(\"Workflow test setup\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// In a real workflow, you'd run these sequentially:",
+									"// 1. Test basic info",
+									"// 2. Test rental options", 
+									"// 3. Test usage policy",
+									"// 4. Test complete",
+									"// 5. Submit actual car (different endpoint)"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"Test Workflow Car\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"plate_number\": \"{{unique_plate}}\",\n  \"year\": 2021,\n  \"color\": \"أبيض\",\n  \"seating_capacity\": 5,\n  \"transmission_type\": \"Automatic\",\n  \"fuel_type\": \"Petrol\",\n  \"current_odometer_reading\": 30000,\n  \"available_without_driver\": true,\n  \"available_with_driver\": false,\n  \"daily_rental_price\": 250,\n  \"daily_km_limit\": 200,\n  \"extra_km_cost\": 1.2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/complete/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "complete", ""]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⚠️ Error Handling Tests",
+			"item": [
+				{
+					"name": "Missing Auth Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"Test Car\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/basic-info/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "basic-info", ""]
+						}
+					}
+				},
+				{
+					"name": "Empty Request Body",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response indicates validation errors\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.valid).to.eql(false);",
+									"    pm.expect(Object.keys(jsonData.errors).length).to.be.above(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/basic-info/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "basic-info", ""]
+						}
+					}
+				},
+				{
+					"name": "Invalid JSON",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ invalid json syntax"
+						},
+						"url": {
+							"raw": "{{base_url}}/cars/test/basic-info/",
+							"host": ["{{base_url}}"],
+							"path": ["cars", "test", "basic-info", ""]
+						}
+					}
+				}
+			]
+		}
+	]
+} 
