@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CarViewSet, CarRentalOptionsViewSet, CarUsagePolicyViewSet, CarStatsViewSet, MyCarsView,
     TestCarBasicInfoView, TestCarRentalOptionsView, TestCarUsagePolicyView, 
-    TestCompleteCarView, QuickPlateCheckView, PricingSuggestionsView
+    TestCompleteCarView, QuickPlateCheckView, PricingSuggestionsView, AvailableCarsView,
+    ExtendedCarRentalOptionsViewSet, ExtendedCarUsagePolicyViewSet
 )
 
 router = DefaultRouter()
@@ -12,9 +13,14 @@ router.register(r'car-rental-options', CarRentalOptionsViewSet)
 router.register(r'car-usage-policy', CarUsagePolicyViewSet)
 router.register(r'car-stats', CarStatsViewSet)
 
+# Extended endpoints with by-car actions
+router.register(r'extended-rental-options', ExtendedCarRentalOptionsViewSet, basename='extended-rental-options')
+router.register(r'extended-usage-policy', ExtendedCarUsagePolicyViewSet, basename='extended-usage-policy')
+
 urlpatterns = [
     path('', include(router.urls)),
     path('my-cars/', MyCarsView.as_view(), name='my-cars'),
+    path('available-cars/', AvailableCarsView.as_view(), name='available-cars'),
     
     # Test APIs للمراحل المختلفة
     path('cars/test/basic-info/', TestCarBasicInfoView.as_view(), name='test-car-basic-info'),
