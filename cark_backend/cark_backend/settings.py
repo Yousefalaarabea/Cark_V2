@@ -77,6 +77,8 @@ INSTALLED_APPS = [
     'payments',
     'wallets',
     'feedback',
+    'notifications',
+    
 ]
 
 
@@ -172,6 +174,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,  # عدد الإشعارات في كل صفحة
 }
 
 PAYMOB_API_KEY = "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2TVRBMU5EZzFOeXdpYm1GdFpTSTZJbWx1YVhScFlXd2lmUS5mYlNUNHN1TV8yTXhJRTBHek9RTkktVGs1NWF4djd0cmJYQlJRUDFyc2dNSWh6bzJMYnpNdlBacnB4NzRqa2xkcExEQTFHU1hyUklFVkc2OWJjNDFGUQ=="
@@ -184,3 +188,39 @@ PAYMOB_HMAC_SECRET = "BCA25D42BBFBC1AD1A09AEFF78FDECE0"
 PAYMOB_INTEGRATION_ID_MOTO = "5168455"
 
 PAYMOB_REDIRECT_URL = "https://accept.paymobsolutions.com/api/acceptance/post_pay"
+
+# Firebase Cloud Messaging Settings
+FCM_SERVER_KEY = "YOUR_FCM_SERVER_KEY_HERE"  # ضع هنا Server Key من Firebase Console
+FCM_PROJECT_ID = "cark-app"  # ضع هنا Project ID من Firebase Console
+# Notifications Settings
+NOTIFICATIONS_SETTINGS = {
+    'DEFAULT_FROM_EMAIL': 'noreply@cark.com',
+    'EMAIL_BACKEND': 'django.core.mail.backends.console.EmailBackend',  # للتطوير
+    'SMS_BACKEND': 'console',  # يمكن تغييره لاحقاً
+    'BATCH_SIZE': 100,  # عدد الإشعارات المرسلة في كل دفعة
+    'RETRY_ATTEMPTS': 3,  # عدد المحاولات عند فشل الإرسال
+}
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'notifications.log',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'notifications': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
