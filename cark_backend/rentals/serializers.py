@@ -5,7 +5,7 @@ from users.models import User
 from payments.models import SavedCard
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .services import dummy_charge_visa
+from .services import dummy_charge_visa  # type: ignore
 
 # Serializer لعرض بيانات المستخدم
 class UserSerializer(serializers.ModelSerializer):
@@ -135,9 +135,9 @@ class RentalCreateUpdateSerializer(serializers.ModelSerializer):
         # تحقق من وجود الكارت إذا تم إدخاله (للـ visa فقط)
         if selected_card_id:
             try:
-                card = SavedCard.objects.get(id=selected_card_id)
+                card = SavedCard.objects.get(id=selected_card_id)  # type: ignore
                 # ملاحظة: user ownership سيتم التحقق منه في create method
-            except SavedCard.DoesNotExist:
+            except SavedCard.DoesNotExist:  # type: ignore
                 raise serializers.ValidationError({
                     'selected_card_id': f'SavedCard with id {selected_card_id} does not exist.'
                 })
@@ -149,21 +149,21 @@ class RentalCreateUpdateSerializer(serializers.ModelSerializer):
         selected_card_id = validated_data.pop('selected_card_id', None)
         
         # Create rental
-        rental = Rental.objects.create(**validated_data)
+        rental = Rental.objects.create(**validated_data)  # type: ignore
         
         # Set selected card if provided and validate ownership
         if selected_card_id:
             try:
-                card = SavedCard.objects.get(id=selected_card_id, user=self.context['request'].user)
+                card = SavedCard.objects.get(id=selected_card_id, user=self.context['request'].user)  # type: ignore
                 rental.selected_card = card
                 rental.save()
-            except SavedCard.DoesNotExist:
+            except SavedCard.DoesNotExist:  # type: ignore
                 raise serializers.ValidationError(f'SavedCard with id {selected_card_id} does not exist or does not belong to you.')
         
         # Create planned trip and stops
-        planned_trip = PlannedTrip.objects.create(rental=rental)
+        planned_trip = PlannedTrip.objects.create(rental=rental)  # type: ignore
         for stop in stops_data:
-            PlannedTripStop.objects.create(planned_trip=planned_trip, **stop)
+            PlannedTripStop.objects.create(planned_trip=planned_trip, **stop)  # type: ignore
         return rental
 
     def update(self, instance, validated_data):
@@ -175,7 +175,7 @@ class RentalCreateUpdateSerializer(serializers.ModelSerializer):
             planned_trip = instance.planned_trip
             planned_trip.stops.all().delete()
             for stop in stops_data:
-                PlannedTripStop.objects.create(planned_trip=planned_trip, **stop)
+                PlannedTripStop.objects.create(planned_trip=planned_trip, **stop)  # type: ignore
         return instance
 
 @action(detail=True, methods=['post'])
@@ -198,7 +198,7 @@ def confirm_booking(self, request, pk=None):
             success = dummy_charge_visa(rental.renter, deposit_amount)
             if success:
                 # حدث حالة الدفع في RentalPayment أو سجل العملية
-                payment, _ = RentalPayment.objects.get_or_create(rental=rental)
+                payment, _ = RentalPayment.objects.get_or_create(rental=rental)  # type: ignore
                 payment.deposit_amount = deposit_amount
                 payment.deposit_paid_status = 'Paid'
                 payment.save()
