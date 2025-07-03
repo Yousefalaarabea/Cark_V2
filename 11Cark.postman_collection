@@ -1,0 +1,4896 @@
+{
+	"info": {
+		"_postman_id": "af399547-0904-4b59-8cb2-40968150700d",
+		"name": "Cark",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "31135389",
+		"_collection_link": "https://dark-meadow-813993.postman.co/workspace/My-Workspace~4a93c0c2-bd1e-4bb6-8604-99073ca6c35a/collection/31135389-af399547-0904-4b59-8cb2-40968150700d?action=share&source=collection_link&creator=31135389"
+	},
+	"item": [
+		{
+			"name": "cars",
+			"item": [
+				{
+					"name": "car",
+					"item": [
+						{
+							"name": "GET للحصول على جميع العربيات",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/cars",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"cars"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "عرض تفاصيل عربية معينة",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/cars/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"cars",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "تعديل جزئي لبيانات عربية",
+							"request": {
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"color\": \"Black\",\r\n    \"current_odometer_reading\": 20000\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/cars/1/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"cars",
+										"1",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "حذف عربية",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/cars/6/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"cars",
+										"6",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "POST لإضافة عربية جديدة",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDY3OTY1LCJpYXQiOjE3NDY0NjQzNjUsImp0aSI6ImQ1ZWQxM2U5ZTk2NTQ0MWI5MjEwMmE0MzI1ZDY5NTZhIiwidXNlcl9pZCI6Nn0.Q2aHnZFuCWyBbW9v8TaMjASlIU12BaQ2yO0jGwbz92g",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"model\": \"Toyota Corolla\",\r\n  \"brand\": \"Toyota\",\r\n  \"car_type\": \"Sedan\",\r\n  \"car_category\": \"Economy\",\r\n  \"plate_number\": \"ACB153\",\r\n  \"year\": 2021,\r\n  \"color\": \"Red\",\r\n  \"seating_capacity\": 5,\r\n  \"transmission_type\": \"Automatic\",\r\n  \"fuel_type\": \"Petrol\",\r\n  \"current_odometer_reading\": 5000\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/cars/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"cars",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get my cars",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0ODIzMzI0LCJpYXQiOjE3NTEyMjMzMjQsImp0aSI6IjhjNDg4NWNlYmI0MjQ0YTI4NzYxNjc2NzJhZmUyN2NmIiwidXNlcl9pZCI6Nn0.ILxuHS4gMbVDn2JkRrJhRArRSMm-i0OMBgB9De3RFlQ",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "  {\r\n    \"amount_cents\": \"10000\",         // مثال: 100 جنيه = 10000 قرش\r\n    \"saved_card_token\": \"توكن الكارت\",\r\n    \"purpose\": \"wallet_recharge\"\r\n  }"
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/my-cars/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"my-cars",
+										""
+									]
+								},
+								"description": "## Endpoint Overview\n\nThis endpoint retrieves a list of cars associated with the user. It allows users to view details about their cars, including various attributes such as model, brand, and availability.\n\n## Request\n\n### Method\n\n`GET`\n\n### URL\n\n`http://localhost:8000/api/my-cars/`\n\n### Request Body\n\nThis endpoint does not require a request body for the GET method. However, the last call included the following parameters:\n\n- **amount_cents** (string): The amount in cents for a transaction.\n    \n- **saved_card_token** (string): A token representing a saved card for processing payments.\n    \n- **purpose** (string): The purpose of the transaction, in this case, for wallet recharge.\n    \n\n> Note: While these parameters were included in a previous request, they are not necessary for retrieving the list of cars. \n  \n\n## Response\n\n### Status Code\n\n`200 OK`\n\n### Content-Type\n\n`application/json`\n\n### Response Structure\n\nThe response is an array of car objects, each containing the following fields:\n\n- **id** (integer): Unique identifier for the car.\n    \n- **model** (string): The model of the car.\n    \n- **brand** (string): The brand of the car.\n    \n- **car_type** (string): The type of the car (e.g., sedan, SUV).\n    \n- **car_category** (string): The category of the car.\n    \n- **plate_number** (string): The vehicle's registration plate number.\n    \n- **year** (integer): The manufacturing year of the car.\n    \n- **color** (string): The color of the car.\n    \n- **seating_capacity** (integer): The number of seats available in the car.\n    \n- **transmission_type** (string): The transmission type (e.g., automatic, manual).\n    \n- **fuel_type** (string): The type of fuel the car uses (e.g., petrol, diesel).\n    \n- **current_odometer_reading** (integer): The current mileage of the car.\n    \n- **availability** (boolean): Availability status of the car.\n    \n- **current_status** (string): Current status of the car (e.g., available, booked).\n    \n- **created_at** (string): Timestamp when the car was added.\n    \n- **updated_at** (string): Timestamp of the last update to the car's information.\n    \n- **approval_status** (boolean): Indicates if the car has been approved for listing.\n    \n- **owner** (integer): Identifier for the owner of the car.\n    \n\nThis structured response provides comprehensive details about each car, enabling users to make informed decisions regarding their vehicles."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "CarRentalOptions",
+					"item": [
+						{
+							"name": "إضافة خيارات إيجار جديدة لعربية",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"car\": 4,\r\n    \"daily_rental_price\": 100,\r\n    \"available_with_driver\": true\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/rental-options/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"rental-options",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "الحصول على كل rental options (GET list)",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDY3OTY1LCJpYXQiOjE3NDY0NjQzNjUsImp0aSI6ImQ1ZWQxM2U5ZTk2NTQ0MWI5MjEwMmE0MzI1ZDY5NTZhIiwidXNlcl9pZCI6Nn0.Q2aHnZFuCWyBbW9v8TaMjASlIU12BaQ2yO0jGwbz92g",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/rental-options?car=6&available_with_driver=true",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"rental-options"
+									],
+									"query": [
+										{
+											"key": "car",
+											"value": "6"
+										},
+										{
+											"key": "available_with_driver",
+											"value": "true"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "تعديل جزء من rental option (PATCH)",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"daily_rental_price\": 130\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/rental-options/by-car/6/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"rental-options",
+										"by-car",
+										"6",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "حذف خيارات ايجار عربية",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/rental-options/3/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"rental-options",
+										"3",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "CarUsagePolicy",
+					"item": [
+						{
+							"name": "get all policies",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDY3OTY1LCJpYXQiOjE3NDY0NjQzNjUsImp0aSI6ImQ1ZWQxM2U5ZTk2NTQ0MWI5MjEwMmE0MzI1ZDY5NTZhIiwidXNlcl9pZCI6Nn0.Q2aHnZFuCWyBbW9v8TaMjASlIU12BaQ2yO0jGwbz92g",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/usage-policies/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"usage-policies",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add policy for car",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"car\": 3,\r\n  \"daily_km_limit\": 100,\r\n  \"extra_km_cost\": 1.5,\r\n  \"extra_hour_cost\": 10.0,\r\n  \"daily_hour_limit\": 8\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/usage-policies/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"usage-policies",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update policy",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"extra_km_cost\": 2.5\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/usage-policies/by-car/6/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"usage-policies",
+										"by-car",
+										"6",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete policy",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/usage-policies/1/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"usage-policies",
+										"1",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "CarStats",
+					"item": [
+						{
+							"name": "get all stats",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/stats/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"stats",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get stats by car",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/stats/by-car/4",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"stats",
+										"by-car",
+										"4"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "ADD STAT",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"car\": 3,\r\n    \"rental_history_count\": 20,\r\n    \"total_earned\": \"20.00\"\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/stats/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"stats",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "edit stat",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2NDcxNzEwLCJpYXQiOjE3NDY0NjgxMTAsImp0aSI6IjViZWFmMzkzZGVlNzQ0MTI4NWFmNzZhMmM0YjZmOWQ5IiwidXNlcl9pZCI6Nn0.XN8otlVqZqW0rSh-Rhk2cYD9-b8yQ8X-Dgq8_iqLyf8",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"rental_history_count\": 10,\r\n    \"total_earned\": \"5000.00\"\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/stats/by-car/3/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"stats",
+										"by-car",
+										"3",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "summary",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ3ODM1ODIwLCJpYXQiOjE3NDc4MzIyMjAsImp0aSI6IjBjZjcxNTMwNGRkYjRjNzY4ZGVlMDhmNWFhOTExMmY0IiwidXNlcl9pZCI6Nn0.RaQjN_sPdNebdvxZVVWydrrUtAmpEoMCZg61x28Av3Y",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/stats/summary",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"stats",
+										"summary"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "not used",
+					"item": [
+						{
+							"name": "✅ التيست النهائي الشامل",
+							"item": [
+								{
+									"name": "Test Complete Car - All Valid",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Complete car data is valid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(true);",
+													"    pm.expect(jsonData.stage).to.eql('complete');",
+													"    pm.expect(jsonData.summary.ready_to_submit).to.eql(true);",
+													"    pm.expect(jsonData.next_action).to.eql('submit_car');",
+													"});",
+													"",
+													"pm.test(\"Cost preview is provided\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    if (jsonData.cost_preview) {",
+													"        pm.expect(jsonData.cost_preview).to.have.property('daily_cost_per_km');",
+													"        pm.expect(jsonData.cost_preview).to.have.property('weekly_cost');",
+													"        pm.expect(jsonData.cost_preview).to.have.property('monthly_cost');",
+													"    }",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"model\": \"Camry\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"plate_number\": \"COMPLETE123\",\n  \"year\": 2020,\n  \"color\": \"أبيض\",\n  \"seating_capacity\": 5,\n  \"transmission_type\": \"Automatic\",\n  \"fuel_type\": \"Petrol\",\n  \"current_odometer_reading\": 50000,\n  \"available_without_driver\": true,\n  \"available_with_driver\": true,\n  \"daily_rental_price\": 300,\n  \"monthly_rental_price\": 7500,\n  \"daily_rental_price_with_driver\": 570,\n  \"daily_km_limit\": 250,\n  \"extra_km_cost\": 1.5,\n  \"daily_hour_limit\": 12,\n  \"extra_hour_cost\": 25\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/complete/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"complete",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Test Complete Car - Mixed Errors",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Complete car data has errors\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(false);",
+													"    pm.expect(jsonData.summary.ready_to_submit).to.eql(false);",
+													"    pm.expect(jsonData.next_action).to.eql('fix_errors');",
+													"    pm.expect(jsonData.errors).to.not.be.empty;",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"model\": \"\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"InvalidType\",\n  \"year\": 1980,\n  \"available_without_driver\": true,\n  \"daily_rental_price\": -100,\n  \"daily_km_limit\": 0\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/complete/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"complete",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "🔍 APIs مساعدة",
+							"item": [
+								{
+									"name": "Quick Plate Check - Available",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Plate number check response\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData).to.have.property('plate_number');",
+													"    pm.expect(jsonData).to.have.property('valid_format');",
+													"    pm.expect(jsonData).to.have.property('available');",
+													"    pm.expect(jsonData).to.have.property('status');",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"plate_number\": \"TEST123PLATE\"\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/plate-check/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"plate-check",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Quick Plate Check - Invalid Format",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Plate number is invalid format\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid_format).to.eql(false);",
+													"    pm.expect(jsonData.status).to.include('تنسيق خاطئ');",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"plate_number\": \"!@#$%^&*()\"\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/plate-check/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"plate-check",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Pricing Suggestions - Economy Sedan",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Pricing suggestions response\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData).to.have.property('car_info');",
+													"    pm.expect(jsonData).to.have.property('suggested_prices');",
+													"    pm.expect(jsonData).to.have.property('suggested_policy');",
+													"    pm.expect(jsonData).to.have.property('price_range');",
+													"    pm.expect(jsonData).to.have.property('tips');",
+													"});",
+													"",
+													"pm.test(\"Suggested prices are reasonable\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    const dailyPrice = jsonData.suggested_prices.without_driver.daily;",
+													"    pm.expect(dailyPrice).to.be.above(0);",
+													"    pm.expect(dailyPrice).to.be.below(5000);",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"year\": 2020\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/pricing-suggestions/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"pricing-suggestions",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Pricing Suggestions - Luxury SUV",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Luxury SUV has higher prices\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    const dailyPrice = jsonData.suggested_prices.without_driver.daily;",
+													"    pm.expect(dailyPrice).to.be.above(400); // Luxury should be more expensive",
+													"});",
+													"",
+													"pm.test(\"Driver price is higher than without driver\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    const withoutDriver = jsonData.suggested_prices.without_driver.daily;",
+													"    const withDriver = jsonData.suggested_prices.with_driver.daily;",
+													"    pm.expect(withDriver).to.be.above(withoutDriver);",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"car_type\": \"SUV\",\n  \"car_category\": \"Luxury\",\n  \"year\": 2022\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/pricing-suggestions/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"pricing-suggestions",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "🧪 Workflow Tests - كامل التسلسل",
+							"item": [
+								{
+									"name": "Full Workflow - Step by Step",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"// Set unique plate number for this test",
+													"const timestamp = Date.now();",
+													"pm.globals.set('unique_plate', 'WORKFLOW' + timestamp);"
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"// This is a workflow test that would typically be broken into multiple requests",
+													"pm.test(\"Workflow test setup\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"// In a real workflow, you'd run these sequentially:",
+													"// 1. Test basic info",
+													"// 2. Test rental options",
+													"// 3. Test usage policy",
+													"// 4. Test complete",
+													"// 5. Submit actual car (different endpoint)"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"model\": \"Test Workflow Car\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"plate_number\": \"{{unique_plate}}\",\n  \"year\": 2021,\n  \"color\": \"أبيض\",\n  \"seating_capacity\": 5,\n  \"transmission_type\": \"Automatic\",\n  \"fuel_type\": \"Petrol\",\n  \"current_odometer_reading\": 30000,\n  \"available_without_driver\": true,\n  \"available_with_driver\": false,\n  \"daily_rental_price\": 250,\n  \"daily_km_limit\": 200,\n  \"extra_km_cost\": 1.2\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/complete/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"complete",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "⚠️ Error Handling Tests",
+							"item": [
+								{
+									"name": "Missing Auth Token",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 401 Unauthorized\", function () {",
+													"    pm.response.to.have.status(401);",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "noauth"
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"model\": \"Test Car\"\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/basic-info/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"basic-info",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Empty Request Body",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Response indicates validation errors\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(false);",
+													"    pm.expect(Object.keys(jsonData.errors).length).to.be.above(0);",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/basic-info/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"basic-info",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Invalid JSON",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 400 Bad Request\", function () {",
+													"    pm.response.to.have.status(400);",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{ invalid json syntax"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/basic-info/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"basic-info",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Car Test APIs - مراحل إضافة العربية",
+					"item": [
+						{
+							"name": "🚗 المرحلة الأولى - البيانات الأساسية",
+							"item": [
+								{
+									"name": "Test Basic Info - Valid Data",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Basic info is valid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(true);",
+													"    pm.expect(jsonData.stage).to.eql('basic_info');",
+													"    pm.expect(jsonData.next_step).to.eql('rental_options');",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"model\": \"Camry\",\n  \"brand\": \"Toyota\",\n  \"car_type\": \"Sedan\",\n  \"car_category\": \"Economy\",\n  \"plate_number\": \"ABC123TEST\",\n  \"year\": 2020,\n  \"color\": \"أبيض\",\n  \"seating_capacity\": 5,\n  \"transmission_type\": \"Automatic\",\n  \"fuel_type\": \"Petrol\",\n  \"current_odometer_reading\": 50000\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/basic-info/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"basic-info",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Test Basic Info - Invalid Data",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Basic info is invalid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(false);",
+													"    pm.expect(jsonData.errors).to.not.be.empty;",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDU2MzIzLCJpYXQiOjE3NTE0NTYzMjMsImp0aSI6IjUzNjg2OGEyNGVkZDQzYzViNDBhOTk2ZThiMjc3ODYxIiwidXNlcl9pZCI6MX0.fXtlCYzQRxvXgqar7Ii24caTk4LC3Pc7VonhRXKPwQw",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"model\": \"\",\n  \"brand\": \"\",\n  \"car_type\": \"InvalidType\",\n  \"year\": 1980,\n  \"seating_capacity\": 20\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/basic-info/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"basic-info",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "💰 المرحلة الثانية - خيارات الإيجار",
+							"item": [
+								{
+									"name": "Test Rental Options - Valid Data",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Rental options are valid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(true);",
+													"    pm.expect(jsonData.stage).to.eql('rental_options');",
+													"    pm.expect(jsonData.next_step).to.eql('usage_policy');",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDU2MzIzLCJpYXQiOjE3NTE0NTYzMjMsImp0aSI6IjUzNjg2OGEyNGVkZDQzYzViNDBhOTk2ZThiMjc3ODYxIiwidXNlcl9pZCI6MX0.fXtlCYzQRxvXgqar7Ii24caTk4LC3Pc7VonhRXKPwQw",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"available_without_driver\": true,\n  \"available_with_driver\": true,\n  \"daily_rental_price\": 300,\n  \"monthly_rental_price\": 7500,\n  \"yearly_rental_price\": 82500,\n  \"daily_rental_price_with_driver\": 570,\n  \"monthly_price_with_driver\": 14250\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/rental-options/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"rental-options",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Test Rental Options - Invalid Prices",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Rental options are invalid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(false);",
+													"    pm.expect(jsonData.errors).to.not.be.empty;",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDU2MzIzLCJpYXQiOjE3NTE0NTYzMjMsImp0aSI6IjUzNjg2OGEyNGVkZDQzYzViNDBhOTk2ZThiMjc3ODYxIiwidXNlcl9pZCI6MX0.fXtlCYzQRxvXgqar7Ii24caTk4LC3Pc7VonhRXKPwQw",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"available_without_driver\": true,\n  \"daily_rental_price\": -100,\n  \"daily_rental_price_with_driver\": 50\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/rental-options/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"rental-options",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "📋 المرحلة الثالثة - سياسة الاستخدام",
+							"item": [
+								{
+									"name": "Test Usage Policy - Valid Data",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Usage policy is valid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(true);",
+													"    pm.expect(jsonData.stage).to.eql('usage_policy');",
+													"    pm.expect(jsonData.next_step).to.eql('complete');",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDU2MzIzLCJpYXQiOjE3NTE0NTYzMjMsImp0aSI6IjUzNjg2OGEyNGVkZDQzYzViNDBhOTk2ZThiMjc3ODYxIiwidXNlcl9pZCI6MX0.fXtlCYzQRxvXgqar7Ii24caTk4LC3Pc7VonhRXKPwQw",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"daily_km_limit\": 250,\n  \"extra_km_cost\": 1.5,\n  \"daily_hour_limit\": 12,\n  \"extra_hour_cost\": 25,\n  \"daily_rental_price\": 300\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/usage-policy/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"usage-policy",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "Test Usage Policy - Invalid Data",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Usage policy is invalid\", function () {",
+													"    const jsonData = pm.response.json();",
+													"    pm.expect(jsonData.valid).to.eql(false);",
+													"    pm.expect(jsonData.errors).to.not.be.empty;",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"auth": {
+											"type": "bearer",
+											"bearer": [
+												{
+													"key": "token",
+													"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDU2MzIzLCJpYXQiOjE3NTE0NTYzMjMsImp0aSI6IjUzNjg2OGEyNGVkZDQzYzViNDBhOTk2ZThiMjc3ODYxIiwidXNlcl9pZCI6MX0.fXtlCYzQRxvXgqar7Ii24caTk4LC3Pc7VonhRXKPwQw",
+													"type": "string"
+												}
+											]
+										},
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"daily_km_limit\": -50,\n  \"extra_km_cost\": 0,\n  \"daily_hour_limit\": 30\n}"
+										},
+										"url": {
+											"raw": "{{base_url}}/cars/test/usage-policy/",
+											"host": [
+												"{{base_url}}"
+											],
+											"path": [
+												"cars",
+												"test",
+												"usage-policy",
+												""
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "users",
+			"item": [
+				{
+					"name": "تعديل صلاحيات المستخدم:",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDczNjEyLCJpYXQiOjE3NTE0NzM2MTIsImp0aSI6IjVhM2ZkNGZjNmIwMjRiOWNiODdkYWE4YzQ0NjgxOTcyIiwidXNlcl9pZCI6Mn0.99opjbA_k8oZSrrd6oeupJY1CGbbEuqQ6YqK2EC-mGs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \r\n    \"is_staff\":\"1\",\r\n    \"is_admin\":\"1\"\r\n\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/users/1/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"users",
+								"1",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET كل المستخدمين",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDgwOTI2LCJpYXQiOjE3NTE0ODA5MjYsImp0aSI6IjdhNmY4ZGZmN2I1ZTRmMDM5ZjVkNTU2ZjRmODQyNWJhIiwidXNlcl9pZCI6MX0.bE3LCLAIpuuy6_yEykTBDGSNga3gUgaErD2dsV8a-Ug",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/users/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"users",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST لإضافة مستخدم جديد",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"full_name\": \"Omar Hassan\",\r\n    \"email\": \"omar@example.com\",\r\n    \"phone_number\": \"0111111111\",\r\n    \"password_hash\": \"hashed_password_here\",\r\n    \"jwt_token\": null,\r\n    \"last_login_at\": null,\r\n    \"email_verified\": false\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/users/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"users",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET كل الأدوار",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/roles",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"roles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST لإضافة دور جديد",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"role_name\": \"Admin\",\r\n    \"description\": \"Person who drive cars\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/roles/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"roles",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET كل روابط المستخدمين بالأدوار",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/user-roles",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user-roles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST لربط مستخدم بدور",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"user\": 1,\r\n    \"role\": 1\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/user-roles/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user-roles",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "تسجيل مستخدم جديد (Register)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"first_name\": \"Ahmed\",\r\n    \"last_name\": \"Ali\",\r\n    \"email\": \"ahmed5@example.com\",\r\n    \"password\": \"A12345678\",\r\n    \"phone_number\": \"01116155565\",\r\n    \"national_id\": \"00000000010000\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/register/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"register",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "إضافة الأدوار للمستخدم",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"user_id\": 1,\r\n    \"role_ids\": [2, 3,4]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/assign-roles/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"assign-roles",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"ahmed555@example.com\",\r\n    \"password\": \"A12345678\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/login/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"login",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "testing tokens",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2MzU2NDU2LCJpYXQiOjE3NDYzNTYxNTYsImp0aSI6IjkyMDFlNDJlOTE1MTQ2YWY5NmJjZTgzOTNkNDUzODFjIiwidXNlcl9pZCI6Mn0.sv86vMutfDzuw_UNs0TRVNMlOoCAKaOoDHOtDLrYG5o",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/user-roles/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user-roles",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "refresh token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc0NjQ0MzU3NywiaWF0IjoxNzQ2MzU3MTc3LCJqdGkiOiI3YTQxNDc3YTBkNGY0ODY3OWRkYjgzOWIxN2QwMWFiOSIsInVzZXJfaWQiOjJ9.6oCaHoH1EzIXHX_Q6iEl1QLf-OR7w-9u0mq6n-4IVqw\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/token/refresh/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"token",
+								"refresh",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getting user roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/user-roles/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"user-roles",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "http://localhost:8000/api/login/",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"ahmed5@example.com\",\r\n    \"password\": \"A12345678\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/login/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"login",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "https://cark-f3fjembga0f6btek.uaenorth-01.azurewebsites.net/api/users/",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwOTQzMjc4LCJpYXQiOjE3NTA5Mzk2NzgsImp0aSI6IjliY2Y5ZjhjYzk3ZTRkZjk4MGJjNGFmNTRhNTMzMmVkIiwidXNlcl9pZCI6MX0.YIoSQ6dzQmO-mqsYbk3V1bHVvxnP51iRKYaEMtLCz_o",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"first_name\": \"Ahmed\",\r\n    \"last_name\": \"Ali\",\r\n    \"email\": \"ahmed55@example.com\",\r\n    \"password\": \"A12345678\",\r\n    \"phone_number\": \"01116155555\",\r\n    \"national_id\": \"00000000000\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://cark-f3fjembga0f6btek.uaenorth-01.azurewebsites.net/api/users/",
+							"protocol": "https",
+							"host": [
+								"cark-f3fjembga0f6btek",
+								"uaenorth-01",
+								"azurewebsites",
+								"net"
+							],
+							"path": [
+								"api",
+								"users",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "documents",
+			"item": [
+				{
+					"name": "document",
+					"item": [
+						{
+							"name": "1 - Create Document",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "multipart/form-data"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "/C:/Users/USER/Downloads/SelfDriveRental-FinalFlow.postman_collection.json"
+										},
+										{
+											"key": "document_type_name",
+											"value": "Drugs_Test",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "3 - Get Document by ID",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDMwMzc4LCJpYXQiOjE3NDgwMjY3NzgsImp0aSI6IjljM2YxMjRhODE5MTQ0NDU4NmEzMmQyNWZmMWM2NTBlIiwidXNlcl9pZCI6Nn0.jM4P1-4NwRlCTZp2wwkzOEodza2XOUHEEY_cQkY6rPw",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/5",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"5"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "4 - Update Document",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ3OTQ5NTc4LCJpYXQiOjE3NDc5NDU5NzgsImp0aSI6ImZkZmE4ZjBmOWYxODQyYWY4MDYxMWQ3MzQ5NGVjNDE2IiwidXNlcl9pZCI6Nn0.Rjn9_Plip7pPkV57fCcZ6bFErJNVpTFxQepxAnHN_TQ",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "/C:/Users/USER/Downloads/document-api.postman_collection.json"
+										},
+										{
+											"key": "document_type_name",
+											"value": "ID",
+											"type": "text"
+										},
+										{
+											"key": "car",
+											"value": "",
+											"type": "text",
+											"disabled": true
+										}
+									]
+								},
+								"url": {
+									"raw": "{{base_url}}/api/documents/5/",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"documents",
+										"5",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "5 - Delete Document",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/documents/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"documents",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "6 - My Pending or Rejected",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDMxNDgwLCJpYXQiOjE3NDgwMjc4ODAsImp0aSI6IjA3NzVhNWQzMTk1YjQ2YWZiOGUwNjNjNTVlZWUyYzJhIiwidXNlcl9pZCI6Nn0.EzZdWMa5U0WWef9STEIB-oaw6MsGVdT4uO2Ay0UrTbA",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/my/pending-rejected",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"my",
+										"pending-rejected"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "2 - Get All Documents",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDIxNzAzLCJpYXQiOjE3NDgwMTgxMDMsImp0aSI6IjA4MDkzM2I1YTY3NTQxZTE5ZGFkOWU5ZGJjYTQ2MDJmIiwidXNlcl9pZCI6Nn0.8Kx8rPI3gbPeNDQrCVTyArs8nb4-30QwmE5SSNtHkbc",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "document_stats ( by all statues)",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDMwMzc4LCJpYXQiOjE3NDgwMjY3NzgsImp0aSI6IjljM2YxMjRhODE5MTQ0NDU4NmEzMmQyNWZmMWM2NTBlIiwidXNlcl9pZCI6Nn0.jM4P1-4NwRlCTZp2wwkzOEodza2XOUHEEY_cQkY6rPw",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/statistics/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"statistics",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "documents_by_entity(car or user)",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDIxNzAzLCJpYXQiOjE3NDgwMTgxMDMsImp0aSI6IjA4MDkzM2I1YTY3NTQxZTE5ZGFkOWU5ZGJjYTQ2MDJmIiwidXNlcl9pZCI6Nn0.8Kx8rPI3gbPeNDQrCVTyArs8nb4-30QwmE5SSNtHkbc",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents-by-entity/?user_id=6",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents-by-entity",
+										""
+									],
+									"query": [
+										{
+											"key": "user_id",
+											"value": "6"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "DocumentsNeedingVerificationView( شغالة علي الفيرفكيشن)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/verification/pending/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"verification",
+										"pending",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "documentType",
+					"item": [
+						{
+							"name": "Add all Types",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "[\r\n  {\"name\": \"Driver_License\", \"description\": \"Driver license document\"},\r\n  {\"name\": \"Drugs_Test\", \"description\": \"Drugs test document\"},\r\n  {\"name\": \"Criminal_Record\", \"description\": \"Criminal record document\"},\r\n  {\"name\": \"Driving_Violations\", \"description\": \"Driving violations document\"},\r\n  {\"name\": \"Profile_Photo\", \"description\": \"Profile photo document\"},\r\n  {\"name\": \"ID\", \"description\": \"National ID document\"},\r\n  {\"name\": \"Car_Photo\", \"description\": \"Car photo document\"},\r\n  {\"name\": \"Car_License\", \"description\": \"Car license document\"},\r\n  {\"name\": \"Vehicle_Violations\", \"description\": \"Vehicle violations document\"},\r\n  {\"name\": \"Insurance\", \"description\": \"Insurance document\"},\r\n  {\"name\": \"Car_Test\", \"description\": \"Car test document\"}\r\n]\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/types/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"types",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create DocumentType",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Driver_License\",\n  \"description\": \"Driver license document\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/types/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"types",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List DocumentTypes",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/types",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"types"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Retrieve One DocumentType",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/types/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"types",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update DocumentType",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Driver_License_Updated\",\n  \"description\": \"Updated description\"\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/types/1/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"types",
+										"1",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete DocumentType",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/types/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"types",
+										"1"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "RoleDocumentRequirement",
+					"item": [
+						{
+							"name": "Create RoleDocumentRequirement",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "[\n  {\n    \"role\": 4,\n    \"document_type\": 1,\n    \"is_mandatory\": true\n  },\n  {\n    \"role\": 4,\n    \"document_type\": 2,\n    \"is_mandatory\": true\n  },\n  {\n    \"role\": 4,\n    \"document_type\": 3,\n    \"is_mandatory\": true\n  },\n  {\n    \"role\": 4,\n    \"document_type\": 4,\n    \"is_mandatory\": false\n  },\n  {\n    \"role\": 4,\n    \"document_type\": 5,\n    \"is_mandatory\": false\n  },\n  {\n    \"role\": 2,\n    \"document_type\": 5,\n    \"is_mandatory\": true\n  },\n  {\n    \"role\": 3,\n    \"document_type\": 5,\n    \"is_mandatory\": true\n  },\n  {\n    \"role\": 2,\n    \"document_type\": 6,\n    \"is_mandatory\": true\n  },\n  {\n    \"role\": 3,\n    \"document_type\": 6,\n    \"is_mandatory\": true\n  }\n]\n"
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role-requirements/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role-requirements",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "List RoleDocumentRequirements",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role-requirements",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role-requirements"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Retrieve One RoleDocumentRequirement",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role-requirements/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role-requirements",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update RoleDocumentRequirement",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"role\": 1,\n  \"document_type\": 2,\n  \"is_mandatory\": false\n}"
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role-requirements/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role-requirements",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete RoleDocumentRequirement",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role-requirements/1",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role-requirements",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Docs for Role",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role-requirements/4/documents-for-role/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role-requirements",
+										"4",
+										"documents-for-role",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Docs for Role (Mandatory)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/role/3/mandatory-documents/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"role",
+										"3",
+										"mandatory-documents",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Document Verification",
+					"item": [
+						{
+							"name": "Get All Verifications",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDIxNzAzLCJpYXQiOjE3NDgwMTgxMDMsImp0aSI6IjA4MDkzM2I1YTY3NTQxZTE5ZGFkOWU5ZGJjYTQ2MDJmIiwidXNlcl9pZCI6Nn0.8Kx8rPI3gbPeNDQrCVTyArs8nb4-30QwmE5SSNtHkbc",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/verifications/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"verifications",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "لتحديث ML Verification",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDMxNDgwLCJpYXQiOjE3NDgwMjc4ODAsImp0aSI6IjA3NzVhNWQzMTk1YjQ2YWZiOGUwNjNjNTVlZWUyYzJhIiwidXNlcl9pZCI6Nn0.EzZdWMa5U0WWef9STEIB-oaw6MsGVdT4uO2Ay0UrTbA",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"status\": \"Rejected\",\r\n  \"comments\": \"Automatic verification passed\",\r\n  \"ml_confidence\": 0.92\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/verifications/ml/9/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"verifications",
+										"ml",
+										"9",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "لتحديث Admin Verification",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDMxNDgwLCJpYXQiOjE3NDgwMjc4ODAsImp0aSI6IjA3NzVhNWQzMTk1YjQ2YWZiOGUwNjNjNTVlZWUyYzJhIiwidXNlcl9pZCI6Nn0.EzZdWMa5U0WWef9STEIB-oaw6MsGVdT4uO2Ay0UrTbA",
+											"type": "string"
+										}
+									]
+								},
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"status\": \"Approved\",\r\n  \"comments\": \"Photo is GOOD\"\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8000/api/documents/verifications/admin/9/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"verifications",
+										"admin",
+										"9",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Single Verification",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/verifications/2/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"verifications",
+										"2",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "admin_pending_documents_list",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4MDIxNzAzLCJpYXQiOjE3NDgwMTgxMDMsImp0aSI6IjA4MDkzM2I1YTY3NTQxZTE5ZGFkOWU5ZGJjYTQ2MDJmIiwidXNlcl9pZCI6Nn0.8Kx8rPI3gbPeNDQrCVTyArs8nb4-30QwmE5SSNtHkbc",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8000/api/documents/admin-pending/",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8000",
+									"path": [
+										"api",
+										"documents",
+										"admin-pending",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "payments (BACK)",
+			"item": [
+				{
+					"name": "pay deposit using paymob (new card)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NjQxMTA5LCJpYXQiOjE3NTEwNDExMDksImp0aSI6ImM5NGY1M2JmODgzZTQyMzk5MWQ0YjBkYzY5MzQyNGYwIiwidXNlcl9pZCI6M30.rRrmKfXbhggzVJTrg4rrINGh9IyBxFUQjQzsLJ_y3P8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount_cents\":\"0 just for saving your card\",\r\n  \"payment_method\": \"card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/start/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"start",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "retrieve saved cards",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxMDQzMDM0LCJpYXQiOjE3NTEwMzk0MzQsImp0aSI6ImVhNjA1YWRiMzJhYjRiMDQ5Yjc3MTc1YTExODVkNDNiIiwidXNlcl9pZCI6M30.ISJBG3SMvit22bGh2heDBqjFA1EUj4jV0n7OIRl15l8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "curl --location 'https://accept.paymob.com/api/ecommerce/orders' \\\r\n--header 'Content-Type: application/json' \\\r\n--data-raw '{\r\n  \"auth_token\": \"AUTH_TOKEN_FROM_STEP_1\",\r\n  \"api_source\": \"INVOICE\",\r\n  \"amount_cents\": \"4000\",\r\n  \"currency\": \"EGP\",\r\n  \"shipping_data\": {\r\n    \"first_name\": \"Test\",\r\n    \"last_name\": \"Account\",\r\n    \"phone_number\": \"01010101010\",\r\n    \"email\": \"test@account.com\"\r\n  },\r\n  \"integrations\": [\r\n    123,\r\n    786\r\n  ],\r\n  \"items\": [\r\n    {\r\n      \"name\": \"ASC1525\",\r\n      \"amount_cents\": \"4000\",\r\n      \"quantity\": \"1\",\r\n      \"description\": \"Smart Watch\"\r\n    }\r\n  ],\r\n  \"delivery_needed\": \"false\"\r\n}'",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/saved-cards/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"saved-cards",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "pay by saved card",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NjQxMTA5LCJpYXQiOjE3NTEwNDExMDksImp0aSI6ImM5NGY1M2JmODgzZTQyMzk5MWQ0YjBkYzY5MzQyNGYwIiwidXNlcl9pZCI6M30.rRrmKfXbhggzVJTrg4rrINGh9IyBxFUQjQzsLJ_y3P8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"saved_card_token\": \"855e22201caca35f42bb3dc610a8e6b8a74c3e366437f0c236826b44\",\r\n    \"amount_cents\": \"5780000\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/start/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"start",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "pay by saved card 1",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxMDI3MDAwLCJpYXQiOjE3NTEwMjM0MDAsImp0aSI6ImFhNmQ5ZDQ2YTYwNzQ1ZGY5YTU0ZWQ5YjZhMjlhZTQxIiwidXNlcl9pZCI6Mn0.R4TET80etDP6OsaTtbWd-U7UiYjTJ6EPHfJA75SEOXg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"source\": {\r\n    \"identifier\": \"855e22201caca35f42bb3dc610a8e6b8a74c3e366437f0c236826b44\",\r\n    \"subtype\": \"TOKEN\"\r\n  },\r\n  \"payment_token\": \"ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SjFjMlZ5WDJsa0lqb3hPVGc0T1RJNExDSmhiVzkxYm5SZlkyVnVkSE1pT2pVM09EQXdNREFzSW1OMWNuSmxibU41SWpvaVJVZFFJaXdpYVc1MFpXZHlZWFJwYjI1ZmFXUWlPalV4TmpnME5UVXNJbTl5WkdWeVgybGtJam96TkRnM01EQTJOakVzSW1KcGJHeHBibWRmWkdGMFlTSTZleUptYVhKemRGOXVZVzFsSWpvaVFXaHRaV1FpTENKc1lYTjBYMjVoYldVaU9pSkJiR2tpTENKemRISmxaWFFpT2lKT1FTSXNJbUoxYVd4a2FXNW5Jam9pVGtFaUxDSm1iRzl2Y2lJNklrNUJJaXdpWVhCaGNuUnRaVzUwSWpvaVRrRWlMQ0pqYVhSNUlqb2lRMkZwY204aUxDSnpkR0YwWlNJNklrVkhJaXdpWTI5MWJuUnllU0k2SWtWSElpd2laVzFoYVd3aU9pSmhhRzFsWkRVMVFHVjRZVzF3YkdVdVkyOXRJaXdpY0dodmJtVmZiblZ0WW1WeUlqb2lNREV4TVRZeE5UVTFOVFVpTENKd2IzTjBZV3hmWTI5a1pTSTZJazVCSWl3aVpYaDBjbUZmWkdWelkzSnBjSFJwYjI0aU9pSk9RU0o5TENKc2IyTnJYMjl5WkdWeVgzZG9aVzVmY0dGcFpDSTZkSEoxWlN3aVpYaDBjbUVpT250OUxDSnphVzVuYkdWZmNHRjViV1Z1ZEY5aGRIUmxiWEIwSWpwbVlXeHpaU3dpWlhod0lqb3hOelV4TWpFeE9ETXdMQ0p3Yld0ZmFYQWlPaUkwTlM0eU5ERXVPQzR5TXpRaWZRLlJXMGVmQ2ZEMWtOS1RqTWNJelYxb3dlYjk1T09xZ3FXNUF0NVdHYzJkS1hmc3hPMHRNSTJKWkJCTm9oaWNrQ2MyekIxU1ZsVDRmMGM3dTdmbkYwaTVB\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://accept.paymob.com/api/acceptance/payments/pay",
+							"protocol": "https",
+							"host": [
+								"accept",
+								"paymob",
+								"com"
+							],
+							"path": [
+								"api",
+								"acceptance",
+								"payments",
+								"pay"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Visa Card Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"tok_1234567890\",\n  \"card_brand\": \"Visa\",\n  \"card_last_four_digits\": \"1234\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/add-card/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"add-card",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Payment Methods Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/payments/payment-methods/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"payment-methods",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Pay with Card Copy",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": \"100.00\",\n  \"payment_method_type\": \"card\",\n  \"payment_method_id\": \"{{card_id}}\",\n  \"payment_for\": \"deposit\",\n  \"rental_type\": \"rental\",\n  \"rental_id\": \"{{rental_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/pay/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"pay",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Pay with Wallet Copy",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": \"50.00\",\n  \"payment_method_type\": \"wallet\",\n  \"payment_method_id\": \"{{wallet_id}}\",\n  \"payment_for\": \"deposit\",\n  \"rental_type\": \"selfdrive\",\n  \"rental_id\": \"{{selfdrive_rental_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payments/pay/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"pay",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin: List All Payment Transactions Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/payments/admin/transactions/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"admin",
+								"transactions",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Rental With Driver",
+			"item": [
+				{
+					"name": "1. Create Rental With Driver",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDczNjEyLCJpYXQiOjE3NTE0NzM2MTIsImp0aSI6IjVhM2ZkNGZjNmIwMjRiOWNiODdkYWE4YzQ0NjgxOTcyIiwidXNlcl9pZCI6Mn0.99opjbA_k8oZSrrd6oeupJY1CGbbEuqQ6YqK2EC-mGs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Token {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"car\": 1,\n\n  \"start_date\": \"2024-09-01\",\n  \"end_date\": \"2024-09-02\",\n\n  \"rental_type\": \"WithDriver\",\n\n  \"pickup_lat\": \"30.0444\",\n  \"pickup_lng\": \"31.2357\",\n  \"pickup_address\": \"Tahrir Square, Cairo\",\n\n\n  \"dropoff_lat\": \"29.9792\",\n  \"dropoff_lng\": \"31.1342\",\n  \"dropoff_address\": \"Pyramids of Giza\",\n\n  \"planned_km\": 300,\n  \"total_waiting_minutes\": 60,\n\n  \"payment_method\": \"visa\", \n  \"selected_card_id\":1,\n\n  \"stops\": [\n   {\n    \"stop_order\": 1,\n    \"latitude\": 24.7,\n    \"longitude\": 46.7,\n    \"approx_waiting_time_minutes\": 30,\n    \"address\": \"مطار الرياض\"\n   },\n   {\n    \"stop_order\": 2,\n    \"latitude\": 24.8,\n    \"longitude\": 46.8,\n    \"approx_waiting_time_minutes\": 20,\n    \"address\": \"فندق الهيلتون\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "http://127.0.0.1:8000/api/rentals/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"rentals",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Owner Confirm Booking",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDczNjEyLCJpYXQiOjE3NTE0NzM2MTIsImp0aSI6IjVhM2ZkNGZjNmIwMjRiOWNiODdkYWE4YzQ0NjgxOTcyIiwidXNlcl9pZCI6Mn0.99opjbA_k8oZSrrd6oeupJY1CGbbEuqQ6YqK2EC-mGs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Token {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/rentals/{{rental_id}}/confirm_booking/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"rentals",
+								"{{rental_id}}",
+								"confirm_booking",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.1 pay deposit by new card ( using paymob ) Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount_cents\":\"5400\",\r\n  \"payment_method\": \"new_card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/rentals/{{rental_id}}/new_card_deposit_payment/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"rentals",
+								"{{rental_id}}",
+								"new_card_deposit_payment",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.2 Pay Deposit by saved card Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"saved_card_id\": \"1\",\r\n    \"amount_cents\": \"5400\",\r\n    \"payment_method\": \"saved_card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/rentals/{{rental_id}}/deposit_payment/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"rentals",
+								"{{rental_id}}",
+								"deposit_payment",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Rental Without Driver",
+			"item": [
+				{
+					"name": "not used",
+					"item": [
+						{
+							"name": "10. Confirm Excess Cash (if cash) Copy",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/selfdrive-rentals/33/confirm_excess_cash_received/",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"selfdrive-rentals",
+										"33",
+										"confirm_excess_cash_received",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "6. Confirm Remaining Cash (if cash) Copy",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/selfdrive-rentals/49/confirm_remaining_cash_received/",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"selfdrive-rentals",
+										"49",
+										"confirm_remaining_cash_received",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "1. Create Rental",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"car\": 1,\n\n  \"start_date\": \"2025-06-17\",\n  \"end_date\": \"2025-06-20\",\n\n  \"pickup_latitude\": \"30.0444\",\n  \"pickup_longitude\": \"31.2357\",\n  \"pickup_address\": \"Tahrir Square, Cairo\",\n\n  \"dropoff_latitude\": \"29.9792\",\n  \"dropoff_longitude\": \"31.1342\",\n  \"dropoff_address\": \"Pyramids of Giza\",\n  \n  \"payment_method\": \"visa\",\n  \"selected_card\" : 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Confirm By Owner",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/confirm_by_owner/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"confirm_by_owner",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.1 pay deposit by new card ( using paymob )",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount_cents\":\"7449\",\r\n  \"payment_method\": \"new_card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/selfdrive-rentals/{{rental_id}}/new_card_deposit_payment/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"new_card_deposit_payment",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3.2 Pay Deposit by saved card",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"saved_card_id\": \"1\",\r\n    \"amount_cents\": \"7449\",\r\n    \"payment_method\": \"saved_card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/deposit_payment/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"deposit_payment",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4. Owner Pickup Handover",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "contract_image",
+									"type": "file",
+									"src": "/E:/CARK_BACK/CARK_Dropoff_APIs.postman_collection.json"
+								},
+								{
+									"key": "confirm_remaining_cash",
+									"value": "true",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/{{rental_id}}/owner_pickup_handover/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"owner_pickup_handover",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "5. Renter Pickup Handover",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "car_image",
+									"type": "file",
+									"src": "/E:/CARK_BACK/Car_Test_APIs.postman_collection.json"
+								},
+								{
+									"key": "odometer_image",
+									"type": "file",
+									"src": "/E:/CARK_BACK/Car_Validation_APIs_Documentation.md"
+								},
+								{
+									"key": "odometer_value",
+									"value": "100000",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/7/renter_pickup_handover/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"7",
+								"renter_pickup_handover",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "6. renter Start Trip",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/7/start_trip/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"7",
+								"start_trip",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "7.owner Request car Location",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/3/request_location/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"3",
+								"request_location",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "9. Renter Dropoff Handover (End) Copy",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "odometer_image",
+									"type": "file",
+									"src": "/E:/CARK_BACK/Car_Validation_APIs_Documentation.md"
+								},
+								{
+									"key": "odometer_value",
+									"value": "105000",
+									"type": "text"
+								},
+								{
+									"key": "car_image",
+									"type": "file",
+									"src": "/E:/CARK_BACK/.gitignore"
+								},
+								{
+									"key": "notes",
+									"value": "",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/7/renter_dropoff_handover/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"7",
+								"renter_dropoff_handover",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "10. Owner Dropoff Handover (End)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "confirm_excess_cash",
+									"value": "true",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/7/owner_dropoff_handover/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"7",
+								"owner_dropoff_handover",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "11. View Summary",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/3/summary/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"3",
+								"summary",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "12. Cancel Rental",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/selfdrive-rentals/48/cancel_rental/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"selfdrive-rentals",
+								"48",
+								"cancel_rental",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "13.1 Renter RATE Owner",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDU2MzIzLCJpYXQiOjE3NTE0NTYzMjMsImp0aSI6IjUzNjg2OGEyNGVkZDQzYzViNDBhOTk2ZThiMjc3ODYxIiwidXNlcl9pZCI6MX0.fXtlCYzQRxvXgqar7Ii24caTk4LC3Pc7VonhRXKPwQw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rental_type\": \"selfdriverental\",\n  \"rental_id\": 7,\n  \"rating\": 5,\n  \"notes\": \"مالك محترم ومتعاون\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/feedback/rate/owner/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"feedback",
+								"rate",
+								"owner",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "13.2  Owner RATE Renter",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDY0MjkzLCJpYXQiOjE3NTE0NjQyOTMsImp0aSI6IjgzMmI2NjI5MWMzMzQwODhhMDQ4MjljNDU3NmJlMWQ2IiwidXNlcl9pZCI6Mn0.UWXZLg4ge419J8FaivRouJ4yOKQ3RZbsETiTes-M3qQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"rental_type\": \"selfdriverental\", \r\n  \"rental_id\": 7,\r\n  \"rating\": 5,\r\n  \"notes\": \"مستأجر محترم وملتزم\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/feedback/rate/renter/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"feedback",
+								"rate",
+								"renter",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "13.3 Renter RATE Car",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA1MDY0MzgzLCJpYXQiOjE3NTE0NjQzODMsImp0aSI6IjRlYzI2Yjc2Y2MxMDQ0MzdiOWUzZjdjY2NkZGFhNDI4IiwidXNlcl9pZCI6MX0.IfE5katWKMUttr5sGhehFTYZH_lck6pc2hAy4D4AJGg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"rental_type\": \"selfdriverental\",\r\n  \"rental_id\": 3, \r\n  \"rating\": 5,\r\n  \"notes\": \"سيارة ممتازة ونظيفة\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/feedback/rate/car/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"feedback",
+								"rate",
+								"car",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "wallets",
+			"item": [
+				{
+					"name": "user balance (with token)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/balance/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"balance",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "user balance (with id admin only)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/admin/user/{{user_id}}/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"admin",
+								"user",
+								"{{user_id}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "user transactions",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/transactions/?limit=10&offset=0",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"transactions",
+								""
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "transfer all my balance to my mobile wallet",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "phone_number",
+									"value": "0123456789",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "description",
+									"value": "تحويل لمحفظة الهاتف المحمول",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/withdraw/all/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"withdraw",
+								"all",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "transfer amount of my balance to my mobile wallet",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "amount",
+									"value": "20.00",
+									"type": "text"
+								},
+								{
+									"key": "method",
+									"value": "wallet_transfer",
+									"type": "text"
+								},
+								{
+									"key": "phone_number",
+									"value": "0123456788",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "تحويل لمحفظة الهاتف المحمول",
+									"type": "text",
+									"disabled": true
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/withdraw/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"withdraw",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "set mobile wallet number ( only once )",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NTQyOTA3LCJpYXQiOjE3NTA5NDI5MDcsImp0aSI6IjFjODA1MTFmNDQzMDQwOTdiZWRhMmU2NDQzMjJkMThmIiwidXNlcl9pZCI6Nn0.2ki62qVn2Y9sGzmt60fQpuAHm8P56-9WBBlk8GsvvHQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"phone_wallet_number\": \"0123456789\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/set-phone-wallet/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"set-phone-wallet",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "payments ( front )",
+			"item": [
+				{
+					"name": "pay deposit using paymob (new card)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0NjQxMTA5LCJpYXQiOjE3NTEwNDExMDksImp0aSI6ImM5NGY1M2JmODgzZTQyMzk5MWQ0YjBkYzY5MzQyNGYwIiwidXNlcl9pZCI6M30.rRrmKfXbhggzVJTrg4rrINGh9IyBxFUQjQzsLJ_y3P8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount_cents\":\"155000\",\r\n  \"payment_method\": \"card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/start/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"start",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "pay deposit saved card",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0OTY3OTA3LCJpYXQiOjE3NTEzNjc5MDcsImp0aSI6IjdmNzUyYjExYjBlMTQwMTNiYjVhNWI2MmI3MzEwMTIxIiwidXNlcl9pZCI6Mn0.fMro3CWYUxWEsHs4cZ2dTAUjLDGNi53JyWDe76rwjrk",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "saved_card_token",
+									"value": "01f8057a6d8db3f2c32a6d8f97cc1cc4fb64f28dfda9024a035f22e2",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "amount_cents",
+									"value": "1000",
+									"type": "text"
+								},
+								{
+									"key": "card_id",
+									"value": "1",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/charge-saved-card/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"charge-saved-card",
+								""
+							],
+							"query": [
+								{
+									"key": "",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "",
+									"value": null,
+									"disabled": true
+								},
+								{
+									"key": "",
+									"value": null,
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add payment method ( card ) WILL COST 1 POUND",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0ODE1MTU5LCJpYXQiOjE3NTEyMTUxNTksImp0aSI6IjA3Y2I1NDE0YTQzMTQ0NjJiY2Y5ZjRiODg2YTY0MjIwIiwidXNlcl9pZCI6Nn0.DUfLn-U7q6rP6QSXxL_pX2ERZqZcMaAqX553MGMRbJU",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"amount_cents\":\"100\",\r\n  \"payment_method\": \"card\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/start/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"start",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add payment method ( wallet )( only once )",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0ODE5Njk2LCJpYXQiOjE3NTEyMTk2OTYsImp0aSI6IjgwYmU3NTc4MTcwNDQ5OGNhYjkwYTYxNjVjYWM5ODQ3IiwidXNlcl9pZCI6N30.Du98OeMW_8dt1lnHNXUn5az3e-wHFYsbeUdVPgDdKak",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"phone_wallet_number\": \"0102821859\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/wallets/set-phone-wallet/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"wallets",
+								"set-phone-wallet",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "pay deposit by saved wallet ( FUTURE WORK)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": ""
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List saved Payment Methods ( wallets and cards )",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0ODIwMjkyLCJpYXQiOjE3NTEyMjAyOTIsImp0aSI6IjBjNWQ5ZTExYmUzZDQyODc4NWM3OGU5MDJiYTllODc2IiwidXNlcl9pZCI6N30.kna2wAV0jQaNOE19v9La31gdJdezduZ2cvU397ZX9PQ",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/payments/payment-methods/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"payments",
+								"payment-methods",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "recharge my wallet ( paymop ) visa only -- new card",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0ODg4OTYxLCJpYXQiOjE3NTEyODg5NjEsImp0aSI6IjMxNmNjMzJjNjhhNjQ1Zjk5MmNjNjRlNjc2ZjlmZTkwIiwidXNlcl9pZCI6Nn0.ducpn-Eai36EqPt78gXSCRF1t_n27FhMDsYULVNs76Q",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "  {\r\n    \"amount_cents\": \"150000\",         // مثال: 100 جنيه = 10000 قرش\r\n    \"payment_method\": \"card\",\r\n    \"purpose\": \"wallet_recharge\"\r\n  }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/wallet-recharge/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"wallet-recharge",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "recharge my wallet ( paymop ) visa only -- saved card",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTA0ODg4OTYxLCJpYXQiOjE3NTEyODg5NjEsImp0aSI6IjMxNmNjMzJjNjhhNjQ1Zjk5MmNjNjRlNjc2ZjlmZTkwIiwidXNlcl9pZCI6Nn0.ducpn-Eai36EqPt78gXSCRF1t_n27FhMDsYULVNs76Q",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "  {\r\n    \"amount_cents\": \"170000\",         // مثال: 100 جنيه = 10000 قرش\r\n    \"saved_card_token\": \"405837e42e29cb43e860f64f6634754bc97c73f0104660a200bc4797\",\r\n    \"purpose\": \"wallet_recharge\"\r\n  }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/payments/wallet-recharge/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"payments",
+								"wallet-recharge",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
