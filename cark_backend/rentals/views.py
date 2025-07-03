@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
 def home(request):
-    return HttpResponse("Welcome to Rentals Home!")
+    return HttpResponse("Welcome to Rentals Home!")  # type: ignore
 
 class RentalViewSet(viewsets.ModelViewSet):
     """
@@ -28,7 +28,7 @@ class RentalViewSet(viewsets.ModelViewSet):
     - إنهاء الرحلة
     - توزيع الأرباح
     """
-    queryset = Rental.objects.all()
+    queryset = Rental.objects.all()  # type: ignore
     serializer_class = RentalSerializer
 
     def get_serializer_class(self):
@@ -66,6 +66,17 @@ class RentalViewSet(viewsets.ModelViewSet):
             )
             payment.remaining_amount = remaining_amount
             payment.save()
+            
+            # Send notification to car owner
+            from notifications.models import Notification
+            Notification.objects.create(
+                user=rental.car.owner,
+                title="New Rental Request",
+                message=f"New rental request for your {rental.car.brand} {rental.car.model} from {rental.pickup_address}",
+                notification_type="rental_request",
+                data={'rental_id': rental.id}
+            )
+            
         return Response(RentalSerializer(rental).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'])
@@ -126,6 +137,16 @@ class RentalViewSet(viewsets.ModelViewSet):
             performed_by=request.user
         )
         
+        # Send notification to renter
+        from notifications.models import Notification
+        Notification.objects.create(
+            user=rental.renter,
+            title="Rental Confirmed",
+            message=f"Your rental for {rental.car.brand} {rental.car.model} has been confirmed. Please pay deposit within 24 hours.",
+            notification_type="rental_confirmed",
+            data={'rental_id': rental.id, 'deposit_amount': float(payment.deposit_amount or 0)}
+        )
+        
         return Response({
             'status': 'Booking confirmed by owner.',
             'message': 'Renter must pay deposit within 24 hours.',
@@ -133,6 +154,65 @@ class RentalViewSet(viewsets.ModelViewSet):
             'new_status': rental.status,
             'deposit_due_at': payment.deposit_due_at
                  })
+
+    @action(detail=True, methods=['post'])
+    def owner_confirm_arrival(self, request, pk=None):
+        """
+        تأكيد وصول المالك لموقع الاستلام (pickup location)
+        """
+        rental = self.get_object()
+        
+        # التحقق من الصلاحيات
+        if rental.car.owner != request.user:
+            return Response({
+                'error_code': 'NOT_OWNER',
+                'error_message': 'Only the car owner can confirm arrival.'
+            }, status=403)
+        
+        # التحقق من الحالة
+        if rental.status != 'Confirmed':
+            return Response({
+                'error_code': 'INVALID_STATUS',
+                'error_message': f'Owner can only confirm arrival when rental is Confirmed. Current status: {rental.status}'
+            }, status=400)
+        
+        # التحقق من عدم التكرار
+        if rental.owner_arrival_confirmed:
+            return Response({
+                'error_code': 'ALREADY_CONFIRMED',
+                'error_message': 'Owner arrival has already been confirmed.',
+                'confirmed_at': rental.owner_arrived_at_pickup
+            }, status=400)
+        
+        # تأكيد الوصول
+        rental.owner_arrival_confirmed = True
+        rental.owner_arrived_at_pickup = timezone.now()
+        rental.save()
+        
+        # تسجيل الحدث
+        RentalLog.objects.create(
+            rental=rental,
+            event='Owner confirmed arrival at pickup location',
+            performed_by_type='Owner',
+            performed_by=request.user
+        )
+        
+        # Send notification to renter
+        from notifications.models import Notification
+        Notification.objects.create(
+            user=rental.renter,
+            title="Driver Arrived",
+            message=f"Your driver has arrived at {rental.pickup_address}. Trip will start soon.",
+            notification_type="driver_arrived",
+            data={'rental_id': rental.id, 'pickup_address': rental.pickup_address}
+        )
+        
+        return Response({
+            'status': 'Owner arrival confirmed.',
+            'message': 'Owner has confirmed arrival at pickup location. Trip can now be started.',
+            'confirmed_at': rental.owner_arrived_at_pickup,
+            'pickup_address': rental.pickup_address
+        })
 
     @action(detail=True, methods=['post'])
     def deposit_payment(self, request, pk=None):
@@ -179,8 +259,8 @@ class RentalViewSet(viewsets.ModelViewSet):
                 'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'
             }, status=400)
         
-        deposit_amount = rental.breakdown.deposit
-        
+            deposit_amount = rental.breakdown.deposit
+            
         # ===== REQUEST VALIDATION (same as self-drive) =====
         
         # Get and validate payment details
@@ -245,6 +325,16 @@ class RentalViewSet(viewsets.ModelViewSet):
                     event='Deposit payment completed',
                     performed_by_type='Renter',
                     performed_by=request.user
+                )
+                
+                # Send notification to owner
+                from notifications.models import Notification
+                Notification.objects.create(
+                    user=rental.car.owner,
+                    title="Deposit Paid",
+                    message=f"Deposit paid for rental of {rental.car.brand} {rental.car.model}. Ready for pickup confirmation.",
+                    notification_type="deposit_paid",
+                    data={'rental_id': rental.id, 'pickup_address': rental.pickup_address}
                 )
                 
                 # Return success response (same format as self-drive)
@@ -419,11 +509,28 @@ class RentalViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def start_trip(self, request, pk=None):
         rental = self.get_object()
+        
+        # التحقق من الصلاحيات
+        if rental.car.owner != request.user:
+            return Response({
+                'error_code': 'NOT_OWNER',
+                'error_message': 'Only the car owner can start the trip.'
+            }, status=403)
+        
+        # التحقق من الحالة
         if rental.status != 'Confirmed':
             return Response({
                 'error_code': 'INVALID_STATUS',
                 'error_message': 'Trip can only be started after deposit is paid and booking is confirmed.',
                 'current_status': rental.status
+            }, status=400)
+        
+        # التحقق من تأكيد وصول المالك
+        if not rental.owner_arrival_confirmed:
+            return Response({
+                'error_code': 'OWNER_ARRIVAL_REQUIRED',
+                'error_message': 'Owner must confirm arrival at pickup location before starting the trip.',
+                'required_action': 'owner_confirm_arrival'
             }, status=400)
         from .models import RentalPayment
         payment, _ = RentalPayment.objects.get_or_create(rental=rental)
@@ -457,6 +564,17 @@ class RentalViewSet(viewsets.ModelViewSet):
         rental.save()
         user = request.user if request.user.is_authenticated else None
         RentalLog.objects.create(rental=rental, event='Trip started', performed_by_type='Owner', performed_by=user)
+        
+        # Send notification to renter
+        from notifications.models import Notification
+        Notification.objects.create(
+            user=rental.renter,
+            title="Trip Started",
+            message=f"Your trip with {rental.car.brand} {rental.car.model} has started. Enjoy your ride!",
+            notification_type="trip_started",
+            data={'rental_id': rental.id, 'payment_method': rental.payment_method}
+        )
+        
         return Response({
             'status': 'Trip started.',
             'payment_method': rental.payment_method,
@@ -476,7 +594,7 @@ class RentalViewSet(viewsets.ModelViewSet):
         stop = get_object_or_404(PlannedTripStop, stop_order=stop_order, planned_trip__rental_id=pk)
         # تحقق أولاً أن الرحلة بدأت
         from .models import RentalLog
-        trip_started = RentalLog.objects.filter(rental_id=pk, event__icontains='Trip started').exists()
+        trip_started = RentalLog.objects.filter(rental_id=pk, event__icontains='Trip started').exists()  # type: ignore
         if not trip_started:
             return Response({'error': 'You must start the trip before starting any stop.'}, status=400)
         # منع تكرار تسجيل الوصول لنفس المحطة
@@ -484,7 +602,7 @@ class RentalViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Arrival for this stop has already been confirmed.'}, status=400)
         # تحقق من منطق بدء المحطة التالية
         if stop_order > 1:
-            prev_stop = PlannedTripStop.objects.filter(planned_trip__rental_id=pk, stop_order=stop_order-1).first()
+            prev_stop = PlannedTripStop.objects.filter(planned_trip__rental_id=pk, stop_order=stop_order-1).first()  # type: ignore
             if prev_stop and not prev_stop.waiting_ended_at:
                 return Response({'error': f'You must end waiting for stop #{stop_order-1} before starting stop #{stop_order}.'}, status=400)
         # تحقق من الموقع (GPS)
@@ -492,7 +610,7 @@ class RentalViewSet(viewsets.ModelViewSet):
         stop.waiting_started_at = request.data.get('waiting_started_at')
         stop.save()
         # سجل الحدث في RentalLog
-        RentalLog.objects.create(
+        RentalLog.objects.create(  # type: ignore
             rental=stop.planned_trip.rental,
             event=f'Stop arrival confirmed (Stop #{stop.stop_order})',
             performed_by_type='Owner',
@@ -520,7 +638,7 @@ class RentalViewSet(viewsets.ModelViewSet):
         stop.actual_waiting_minutes = actual_waiting_minutes
         stop.save()
         # سجل الحدث في RentalLog
-        RentalLog.objects.create(
+        RentalLog.objects.create(  # type: ignore
             rental=stop.planned_trip.rental,
             event=f'Waiting ended at stop #{stop.stop_order} (actual_waiting_minutes={actual_waiting_minutes})',
             performed_by_type='Owner',
@@ -593,11 +711,11 @@ class RentalViewSet(viewsets.ModelViewSet):
             message = f'Owner should collect {cash_to_collect} EGP cash (remaining: {remaining_amount}, excess: {excess_amount}).'
         
         # إنهاء الرحلة
-        rental.status = 'Finished'
-        rental.save()
+            rental.status = 'Finished'
+            rental.save()
         
         # تسجيل العملية
-        user = request.user if request.user.is_authenticated else None
+            user = request.user if request.user.is_authenticated else None
         RentalLog.objects.create(
             rental=rental, 
             event='Trip ended', 
@@ -606,15 +724,15 @@ class RentalViewSet(viewsets.ModelViewSet):
         )
         
         return Response({
-            'status': 'Trip ended successfully.',
+        'status': 'Trip ended successfully.',
             'payment_method': rental.payment_method,
-            'base_cost': base_final_cost,
-            'excess_amount': excess_amount,
-            'final_amount': final_amount,
+        'base_cost': base_final_cost,
+        'excess_amount': excess_amount,
+        'final_amount': final_amount,
             'extra_waiting_minutes': extra_waiting_minutes,
-            'remaining_amount': float(payment.remaining_amount or 0),
-            'cash_to_collect': remaining_amount + excess_amount if rental.payment_method == 'cash' else 0,
-            'message': message
+        'remaining_amount': float(payment.remaining_amount or 0),
+        'cash_to_collect': remaining_amount + excess_amount if rental.payment_method == 'cash' else 0,
+        'message': message
         })
 
     @action(detail=True, methods=['post'])
@@ -648,7 +766,7 @@ def create_rental_breakdown(rental, planned_km, total_waiting_minutes):
         extra_km_rate,
         extra_hour_cost
     )
-    breakdown, _ = RentalBreakdown.objects.update_or_create(
+    breakdown, _ = RentalBreakdown.objects.update_or_create(  # type: ignore
         rental=rental,
         defaults={
             'planned_km': planned_km,
@@ -668,7 +786,7 @@ def create_rental_breakdown(rental, planned_km, total_waiting_minutes):
         }
     )
     from .models import RentalPayment
-    payment, _ = RentalPayment.objects.get_or_create(rental=rental)
+    payment, _ = RentalPayment.objects.get_or_create(rental=rental)  # type: ignore
     payment.deposit_amount = breakdown_data['deposit']
     payment.payment_method = payment_method
     payment.remaining_amount = breakdown_data['remaining']
@@ -717,9 +835,9 @@ class NewCardDepositPaymentView(APIView):
         # Get or create payment record
         from .models import RentalPayment
         try:
-            payment = RentalPayment.objects.get(rental=rental)
-        except RentalPayment.DoesNotExist:
-            payment = RentalPayment.objects.create(rental=rental)
+            payment = RentalPayment.objects.get(rental=rental)  # type: ignore
+        except RentalPayment.DoesNotExist:  # type: ignore
+            payment = RentalPayment.objects.create(rental=rental)  # type: ignore
         
         if not payment or not hasattr(rental, 'breakdown'):
             return Response({
@@ -818,8 +936,8 @@ class NewCardDepositPaymentView(APIView):
             
         from .models import RentalPayment
         try:
-            payment = RentalPayment.objects.get(rental=rental)
-        except RentalPayment.DoesNotExist:
+            payment = RentalPayment.objects.get(rental=rental)  # type: ignore
+        except RentalPayment.DoesNotExist:  # type: ignore
             return Response({
                 'error_code': 'PAYMENT_NOT_FOUND', 
                 'error_message': 'لا يوجد بيانات دفع مرتبطة بهذا الحجز.'

@@ -35,10 +35,15 @@ class Rental(models.Model):
                                      related_name='regular_rentals', 
                                      help_text="Pre-selected card for deposit and remaining payments")
     
+    # Owner arrival confirmation
+    owner_arrived_at_pickup = models.DateTimeField(null=True, blank=True, help_text="When owner confirmed arrival at pickup location")
+    owner_arrival_confirmed = models.BooleanField(default=False, help_text="Whether owner confirmed arrival at pickup location")  # type: ignore
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
-        return f"Rental #{self.id} - Car {self.car.id} - Renter {self.renter.username} - Status {self.status}"
+        return f"Rental #{self.id} - Car {self.car.id} - Renter {self.renter.username} - Status {self.status}"  # type: ignore
+        
 
     
 
@@ -94,7 +99,7 @@ class RentalPayment(models.Model):
     rental_total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Total amount after adding any extra costs at the end of rental")
 
     def __str__(self):
-        return f"Payment info for Rental #{self.rental.id}"
+        return f"Payment info for Rental #{self.rental.id}"  # type: ignore
 
     @property
     def is_fully_paid(self):
@@ -107,18 +112,18 @@ class RentalPayment(models.Model):
     def total_paid_amount(self):
         total = 0
         if self.deposit_paid_status == 'Paid':
-            total += self.deposit_amount
+            total += self.deposit_amount  # type: ignore
         if self.remaining_paid_status == 'Paid':
-            total += self.remaining_amount  # remaining_amount already includes limits_excess_insurance
+            total += self.remaining_amount   # remaining_amount already includes limits_excess_insurance     # type: ignore
         return total
 
     @property
     def refunded_amount(self):
         total = 0
         if self.deposit_refunded_status == 'Refunded':
-            total += self.deposit_amount
+            total += self.deposit_amount  # type: ignore
         if self.limits_refunded_status == 'Refunded':
-            total += self.limits_excess_insurance_amount
+            total += self.limits_excess_insurance_amount  # type: ignore
         return total
 
     @property
@@ -139,7 +144,7 @@ class PlannedTrip(models.Model):
     route_polyline = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f"Planned Trip for Rental #{self.rental.id}"
+        return f"Planned Trip for Rental #{self.rental.id}"  # type: ignore
 
 
 class PlannedTripStop(models.Model):
@@ -147,23 +152,23 @@ class PlannedTripStop(models.Model):
     stop_order = models.PositiveIntegerField()
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
-    approx_waiting_time_minutes = models.PositiveIntegerField(default=0)
+    approx_waiting_time_minutes = models.PositiveIntegerField(default=0)  # type: ignore
     address = models.CharField(max_length=255, null=True, blank=True)  # عنوان المحطة
-    is_completed = models.BooleanField(default=False)
+    is_completed = models.BooleanField(default=False)  # type: ignore
 
     # --- NEW FIELDS FOR ACTUAL WAITING & LOCATION VERIFICATION ---
-    actual_waiting_minutes = models.PositiveIntegerField(default=0)
+    actual_waiting_minutes = models.PositiveIntegerField(default=0)  # type: ignore
     waiting_started_at = models.DateTimeField(null=True, blank=True)
     waiting_ended_at = models.DateTimeField(null=True, blank=True)
     # For location verification at stop
-    location_verified = models.BooleanField(default=False)
+    location_verified = models.BooleanField(default=False)  # type: ignore
 
     class Meta:
         unique_together = ('planned_trip', 'stop_order')
         ordering = ['stop_order']
 
     def __str__(self):
-        return f"Stop {self.stop_order} for Trip #{self.planned_trip.id}"
+        return f"Stop {self.stop_order} for Trip #{self.planned_trip.id}"  # type: ignore
 
 
 class RentalLog(models.Model):
@@ -181,43 +186,43 @@ class RentalLog(models.Model):
     performed_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='rental_logs')
 
     def __str__(self):
-        return f"[{self.timestamp}] Rental #{self.rental.id} - {self.event}"
+        return f"[{self.timestamp}] Rental #{self.rental.id} - {self.event}"  # type: ignore
 
 
 class RentalBreakdown(models.Model):
     rental = models.OneToOneField(Rental, on_delete=models.CASCADE, related_name='breakdown')
     
     # ===== INITIAL PLANNING =====
-    planned_km = models.FloatField(default=0)
-    total_waiting_minutes = models.IntegerField(default=0, help_text="Planned waiting minutes")
-    daily_price = models.FloatField(default=0)
+    planned_km = models.FloatField(default=0)  # type: ignore
+    total_waiting_minutes = models.IntegerField(default=0, help_text="Planned waiting minutes")  # type: ignore
+    daily_price = models.FloatField(default=0)  # type: ignore
     
     # ===== BASIC COSTS =====
-    extra_km_cost = models.FloatField(default=0)
-    waiting_cost = models.FloatField(default=0)
-    total_cost = models.FloatField(default=0)
-    deposit = models.FloatField(default=0)
-    platform_fee = models.FloatField(default=0)
-    driver_earnings = models.FloatField(default=0)
-    allowed_km = models.FloatField(default=0)
-    extra_km = models.FloatField(default=0)
-    base_cost = models.FloatField(default=0)
-    final_cost = models.FloatField(default=0, help_text="Final cost without end-of-trip excess")
-    commission_rate = models.FloatField(default=0.2)
+    extra_km_cost = models.FloatField(default=0)  # type: ignore
+    waiting_cost = models.FloatField(default=0)  # type: ignore
+    total_cost = models.FloatField(default=0)  # type: ignore
+    deposit = models.FloatField(default=0)  # type: ignore
+    platform_fee = models.FloatField(default=0)  # type: ignore
+    driver_earnings = models.FloatField(default=0)  # type: ignore
+    allowed_km = models.FloatField(default=0)  # type: ignore
+    extra_km = models.FloatField(default=0)  # type: ignore
+    base_cost = models.FloatField(default=0)  # type: ignore
+    final_cost = models.FloatField(default=0, help_text="Final cost without end-of-trip excess")  # type: ignore
+    commission_rate = models.FloatField(default=0.2)  # type: ignore
     
     # ===== END-OF-TRIP EXCESS (like self-drive) =====
-    actual_total_waiting_minutes = models.IntegerField(default=0, help_text="Actual waiting minutes at end of trip")
-    extra_waiting_minutes = models.IntegerField(default=0, help_text="Extra waiting beyond planned")
-    excess_waiting_cost = models.FloatField(default=0, help_text="Cost of extra waiting")
+    actual_total_waiting_minutes = models.IntegerField(default=0, help_text="Actual waiting minutes at end of trip")  # type: ignore
+    extra_waiting_minutes = models.IntegerField(default=0, help_text="Extra waiting beyond planned")  # type: ignore
+    excess_waiting_cost = models.FloatField(default=0, help_text="Cost of extra waiting")  # type: ignore
     
     # ===== FINAL TOTALS =====
-    final_total_cost = models.FloatField(default=0, help_text="Final cost including all excess charges")
+    final_total_cost = models.FloatField(default=0, help_text="Final cost including all excess charges")  # type: ignore
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Breakdown for Rental #{self.rental.id}"
+        return f"Breakdown for Rental #{self.rental.id}"  # type: ignore
         
     @property
     def has_excess_charges(self):

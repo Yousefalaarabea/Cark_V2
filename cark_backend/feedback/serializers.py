@@ -146,13 +146,13 @@ class BaseRatingSerializer(serializers.ModelSerializer):
         """التحقق من التقييمات المكررة"""
         rental_content_type = self.get_rental_content_type(rental_type)
         
-        if Rating.objects.filter(
+        if Rating.objects.filter(  # type: ignore
             reviewer=user, 
             reviewee_content_type=reviewee_content_type, 
             reviewee_object_id=reviewee_object_id, 
             rental_content_type=rental_content_type, 
             rental_object_id=rental_id
-        ).exists():  # type: ignore
+        ).exists():
             raise serializers.ValidationError({'error': 'You have already rated this entity for this rental.'})
 
 

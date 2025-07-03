@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 import re
 
 class CarViewSet(viewsets.ModelViewSet):
-    queryset = Car.objects.all()
+    queryset = Car.objects.all()  # type: ignore
     serializer_class = CarSerializer
     #permission_classes = [IsAuthenticated]
 
@@ -25,8 +25,8 @@ class CarViewSet(viewsets.ModelViewSet):
         serializer.save(owner=user)
 
 
-class CarRentalOptionsViewSet(viewsets.ModelViewSet):
-    queryset = CarRentalOptions.objects.all()
+class CarRentalOptionsViewSet(viewsets.ModelViewSet):  # type: ignore   
+    queryset = CarRentalOptions.objects.all()  # type: ignore
     serializer_class = CarRentalOptionsSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -88,16 +88,95 @@ class CarRentalOptionsViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
+class CarStatsViewSet(viewsets.ModelViewSet):
+    queryset = CarStats.objects.all()  # type: ignore
+    serializer_class = CarStatsSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['patch'], url_path=r'by-car/(?P<car_id>\d+)')
+    def patch_by_car(self, request, car_id=None):
+        try:
+            car_stats = CarStats.objects.get(car__id=car_id)  # type: ignore
+        except CarStats.DoesNotExist:  # type: ignore
+            return Response({'error': 'Car stats not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.get_serializer(car_stats, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path=r'by-car/(?P<car_id>\d+)')
+    def get_by_car(self, request, car_id=None):
+        try:
+            car_stats = CarStats.objects.get(car__id=car_id)  # type: ignore
+        except CarStats.DoesNotExist:  # type: ignore
+            return Response({'error': 'No stats found for this car.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = self.get_serializer(car_stats)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def get_summary(self, request):
+        total_rentals = CarStats.objects.aggregate(total=models.Sum('rental_history_count'))  # type: ignore
+        total_earned = CarStats.objects.aggregate(total=models.Sum('total_earned'))  # type: ignore
+        return Response({
+            'total_rentals': total_rentals['total'] or 0,
+            'total_earned': total_earned['total'] or 0
+        })
 
 
-class CarUsagePolicyViewSet(viewsets.ModelViewSet):
-    queryset = CarUsagePolicy.objects.all()
+# Extended ViewSets with additional methods
+class ExtendedCarRentalOptionsViewSet(viewsets.ModelViewSet):
+    queryset = CarRentalOptions.objects.all()  # type: ignore
+    serializer_class = CarRentalOptionsSerializer
+    permission_classes = [IsAuthenticated]
+
+    # Endpoint مخصص لتعديل rental options بناء على car id
+    @action(detail=False, methods=['patch'], url_path=r'by-car/(?P<car_id>\d+)')
+    def update_by_car(self, request, car_id=None):
+        car = get_object_or_404(Car, id=car_id)
+        
+        # تأكد ان المالك هو نفس المستخدم
+        if car.owner != request.user:
+            return Response({'error': 'You are not the owner of this car.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # جلب rental option المرتبط بالعربية
+        rental_option = get_object_or_404(CarRentalOptions, car=car)
+
+        # استخدام الـ serializer للتعديل
+        serializer = self.get_serializer(rental_option, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ExtendedCarUsagePolicyViewSet(viewsets.ModelViewSet):
+    queryset = CarUsagePolicy.objects.all()  # type: ignore
+    serializer_class = CarUsagePolicySerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['patch'], url_path=r'by-car/(?P<car_id>\d+)')
+    def partial_update_by_car(self, request, car_id=None):
+        try:
+            usage_policy = CarUsagePolicy.objects.get(car__id=car_id)  # type: ignore
+        except CarUsagePolicy.DoesNotExist:  # type: ignore
+            return Response({'error': 'Usage policy for this car not found.'}, status=404)
+
+        serializer = self.get_serializer(usage_policy, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class CarUsagePolicyViewSet(viewsets.ModelViewSet): # type: ignore
+    queryset = CarUsagePolicy.objects.all()  # type: ignore
     serializer_class = CarUsagePolicySerializer
     permission_classes = [IsAuthenticated]
 
     # 1. عرض كل سياسات الاستخدام لكل العربيات
     def list(self, request, *args, **kwargs):
-        queryset = CarUsagePolicy.objects.all()
+        queryset = CarUsagePolicy.objects.all()  # type: ignore
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -162,99 +241,12 @@ class CarUsagePolicyViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-class CarStatsViewSet(viewsets.ModelViewSet):
-    queryset = CarStats.objects.all()
-    serializer_class = CarStatsSerializer
-    #permission_classes = [IsAuthenticated]
 
-
-
-class CarRentalOptionsViewSet(viewsets.ModelViewSet):
-    queryset = CarRentalOptions.objects.all()
-    serializer_class = CarRentalOptionsSerializer
-    permission_classes = [IsAuthenticated]
-    #filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    #filterset_fields = ['car', 'available_with_driver']
-
-    # Endpoint مخصص لتعديل rental options بناء على car id
-    @action(detail=False, methods=['patch'], url_path='by-car/(?P<car_id>\d+)')
-    def update_by_car(self, request, car_id=None):
-        car = get_object_or_404(Car, id=car_id)
-        
-        # تأكد ان المالك هو نفس المستخدم
-        if car.owner != request.user:
-            return Response({'error': 'You are not the owner of this car.'}, status=status.HTTP_403_FORBIDDEN)
-
-        # جلب rental option المرتبط بالعربية
-        rental_option = get_object_or_404(CarRentalOptions, car=car)
-
-        # استخدام الـ serializer للتعديل
-        serializer = self.get_serializer(rental_option, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
-    
-class CarUsagePolicyViewSet(viewsets.ModelViewSet):
-    queryset = CarUsagePolicy.objects.all()
-    serializer_class = CarUsagePolicySerializer
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=False, methods=['patch'], url_path='by-car/(?P<car_id>[^/.]+)')
-    def partial_update_by_car(self, request, car_id=None):
-        try:
-            usage_policy = CarUsagePolicy.objects.get(car__id=car_id)
-        except CarUsagePolicy.DoesNotExist:
-            return Response({'error': 'Usage policy for this car not found.'}, status=404)
-
-        serializer = self.get_serializer(usage_policy, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-
-class CarStatsViewSet(viewsets.ModelViewSet):
-    queryset = CarStats.objects.all()
-    serializer_class = CarStatsSerializer
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=False, methods=['patch'], url_path='by-car/(?P<car_id>[^/.]+)')
-    def patch_by_car(self, request, car_id=None):
-        try:
-            car_stats = CarStats.objects.get(car__id=car_id)
-        except CarStats.DoesNotExist:
-            return Response({'error': 'Car stats not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = self.get_serializer(car_stats, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'], url_path='by-car/(?P<car_id>[^/.]+)')
-    def get_by_car(self, request, car_id=None):
-        try:
-            car_stats = CarStats.objects.get(car__id=car_id)
-        except CarStats.DoesNotExist:
-            return Response({'error': 'No stats found for this car.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = self.get_serializer(car_stats)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['get'], url_path='summary')
-    def get_summary(self, request):
-        total_rentals = CarStats.objects.aggregate(total=models.Sum('rental_history_count'))
-        total_earned = CarStats.objects.aggregate(total=models.Sum('total_earned'))
-        return Response({
-            'total_rentals': total_rentals['total'] or 0,
-            'total_earned': total_earned['total'] or 0
-        })
 
 class MyCarsView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        cars = Car.objects.filter(owner=request.user)
+        cars = Car.objects.filter(owner=request.user)  # type: ignore   
         serializer = CarSerializer(cars, many=True)
         return Response(serializer.data)
 
@@ -1328,4 +1320,146 @@ class PricingSuggestionsView(APIView):
                 'راقب أسعار المنافسين في منطقتك',
                 'اضبط الأسعار حسب الطلب والموسم'
             ]
+        })
+
+class AvailableCarsView(APIView):
+    """
+    عرض السيارات المتاحة مع كل التفاصيل والفلترة
+    GET /api/available-cars/
+    
+    Parameters:
+    - available_from: تاريخ البداية (YYYY-MM-DD)
+    - available_to: تاريخ النهاية (YYYY-MM-DD)
+    - rental_type: نوع الإيجار (with_driver, without_driver, both)
+    - car_type: نوع السيارة (SUV, Sedan, etc.)
+    - car_category: فئة السيارة (Economy, Luxury, etc.)
+    - city: المدينة
+    - min_price: أقل سعر
+    - max_price: أعلى سعر
+    """
+    
+    def get(self, request):
+        from .serializers import DetailedCarSerializer
+        from django.db.models import Q
+        from datetime import datetime
+        
+        # Get query parameters
+        available_from = request.query_params.get('available_from')
+        available_to = request.query_params.get('available_to')
+        rental_type = request.query_params.get('rental_type')
+        car_type = request.query_params.get('car_type')
+        car_category = request.query_params.get('car_category')
+        city = request.query_params.get('city')
+        min_price = request.query_params.get('min_price')
+        max_price = request.query_params.get('max_price')
+        
+        # Start with all cars (will apply filters later)
+        queryset = Car.objects.all().select_related('rental_options', 'usage_policy', 'stats')  # type: ignore
+        
+        # Filter by date range (check if car is not booked during this period)
+        if available_from and available_to:
+            try:
+                from_date = datetime.strptime(available_from, '%Y-%m-%d').date()
+                to_date = datetime.strptime(available_to, '%Y-%m-%d').date()
+                
+                # Exclude cars that have active rentals during this period
+                from rentals.models import Rental
+                from selfdrive_rentals.models import SelfDriveRental
+                
+                # Get cars with conflicting regular rentals
+                conflicting_regular_rentals = Rental.objects.filter(# type: ignore
+                    Q(start_date__lte=to_date) & Q(end_date__gte=from_date),
+                    status__in=['Confirmed', 'Ongoing']
+                ).values_list('car_id', flat=True)
+                
+                # Get cars with conflicting self-drive rentals
+                conflicting_selfdrive_rentals = SelfDriveRental.objects.filter( # type: ignore
+                    Q(start_date__date__lte=to_date) & Q(end_date__date__gte=from_date),
+                    status__in=['Confirmed', 'Ongoing']
+                ).values_list('car_id', flat=True)
+                
+                # Combine both conflicting lists
+                conflicting_cars = list(conflicting_regular_rentals) + list(conflicting_selfdrive_rentals)
+                
+                # Exclude conflicting cars
+                queryset = queryset.exclude(id__in=conflicting_cars)
+                
+            except ValueError:
+                return Response({
+                    'error': 'Invalid date format. Use YYYY-MM-DD format.',
+                    'available_from': available_from,
+                    'available_to': available_to
+                }, status=400)
+        
+        # Filter by rental type
+        if rental_type:
+            if rental_type == 'with_driver':
+                queryset = queryset.filter(rental_options__available_with_driver=True)
+            elif rental_type == 'without_driver':
+                queryset = queryset.filter(rental_options__available_without_driver=True)
+            elif rental_type == 'both':
+                queryset = queryset.filter(
+                    rental_options__available_with_driver=True,
+                    rental_options__available_without_driver=True
+                )
+        
+        # Filter by car type
+        if car_type:
+            queryset = queryset.filter(car_type=car_type)
+        
+        # Filter by car category
+        if car_category:
+            queryset = queryset.filter(car_category=car_category)
+        
+        # Filter by price range (daily rental price)
+        if min_price or max_price:
+            price_filter = Q()
+            if min_price:
+                price_filter &= (
+                    Q(rental_options__daily_rental_price__gte=min_price) |
+                    Q(rental_options__daily_rental_price_with_driver__gte=min_price)
+                )
+            if max_price:
+                price_filter &= (
+                    Q(rental_options__daily_rental_price__lte=max_price) |
+                    Q(rental_options__daily_rental_price_with_driver__lte=max_price)
+                ) # type: ignore
+            queryset = queryset.filter(price_filter)
+        
+        # Apply basic filters (only if no specific filters are provided, show all cars)
+        # But ensure we have basic car data
+        queryset = queryset.filter(
+            availability=True,
+            current_status='Available'
+        )
+        
+        # Only filter by approval_status if needed for production
+        # queryset = queryset.filter(approval_status=True)
+        
+        # Debug info
+        total_cars = Car.objects.count()  # type: ignore
+        available_cars = Car.objects.filter(availability=True, current_status='Available').count()  # type: ignore
+        cars_with_rental_options = Car.objects.filter(rental_options__isnull=False).count()  # type: ignore
+        
+        # Serialize the data with request context for image URLs
+        serializer = DetailedCarSerializer(queryset, many=True, context={'request': request})
+        
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+            'debug_info': {
+                'total_cars_in_db': total_cars,
+                'available_cars': available_cars,
+                'cars_with_rental_options': cars_with_rental_options,
+            },
+            'filters_applied': {
+                'available_from': available_from,
+                'available_to': available_to,
+                'rental_type': rental_type,
+                'car_type': car_type,
+                'car_category': car_category,
+                'city': city,
+                'min_price': min_price,
+                'max_price': max_price
+            }
         })

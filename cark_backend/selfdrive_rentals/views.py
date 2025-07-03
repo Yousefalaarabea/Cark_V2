@@ -1632,7 +1632,7 @@ class RentalStatusTimelineView(APIView):
         except SelfDriveRental.DoesNotExist:  # type: ignore
             return Response({'error': 'Rental not found'}, status=404)
             
-        
+            
         payment = rental.payment  # type: ignore
         contract = getattr(rental, 'contract', None)
         breakdown = getattr(rental, 'breakdown', None)
