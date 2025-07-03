@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'payments',
     'wallets',
     'feedback',
+    'notifications',
 ]
 
 
@@ -208,6 +209,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,  # عدد الإشعارات في كل صفحة
 }
 
 
@@ -228,3 +231,37 @@ PAYMOB_INTEGRATION_ID_MOTO = "5168455"
 PAYMOB_REDIRECT_URL = "https://accept.paymobsolutions.com/api/acceptance/post_pay"
 
 #STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# Notifications Settings
+NOTIFICATIONS_SETTINGS = {
+    'DEFAULT_FROM_EMAIL': 'noreply@cark.com',
+    'EMAIL_BACKEND': 'django.core.mail.backends.console.EmailBackend',  # للتطوير
+    'SMS_BACKEND': 'console',  # يمكن تغييره لاحقاً
+    'BATCH_SIZE': 100,  # عدد الإشعارات المرسلة في كل دفعة
+    'RETRY_ATTEMPTS': 3,  # عدد المحاولات عند فشل الإرسال
+}
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'notifications.log',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'notifications': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
+
+
