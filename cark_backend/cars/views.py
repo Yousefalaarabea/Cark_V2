@@ -919,6 +919,7 @@ class TestCarRentalOptionsView(APIView):
             )['avg'] or 300
             
             user_price = float(data['daily_rental_price'])
+            avg_market_price = float(avg_market_price)  # Convert to float to avoid type error
             difference = ((user_price - avg_market_price) / avg_market_price) * 100
             
             market_comparison = {
