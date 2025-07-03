@@ -37,7 +37,6 @@ class CarSerializer(serializers.ModelSerializer):
         return value
 
 
-
 class CarRentalOptionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CarRentalOptions
@@ -99,3 +98,53 @@ class CarStatsSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("Total earned cannot be negative.")
         return value
+
+
+# New detailed serializer for available cars with all related data
+class DetailedCarSerializer(serializers.ModelSerializer):
+    rental_options = CarRentalOptionsSerializer(read_only=True)
+    usage_policy = CarUsagePolicySerializer(read_only=True)
+    stats = CarStatsSerializer(read_only=True)
+    images = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Car
+        fields = [
+            'id', 'owner', 'model', 'brand', 'car_type', 'car_category',
+            'plate_number', 'year', 'color', 'seating_capacity',
+            'transmission_type', 'fuel_type', 'current_odometer_reading',
+            'availability', 'current_status', 'created_at', 'updated_at',
+            'approval_status', 'avg_rating', 'total_reviews',
+            'rental_options', 'usage_policy', 'stats', 'images'
+        ]
+        read_only_fields = ['owner', 'created_at', 'updated_at']
+    
+    def get_images(self, obj):
+        """
+        جلب صور السيارة من الـ documents المربوطة بيها
+        """
+        from documents.models import Document
+        
+        # جلب كل الـ documents الخاصة بالسيارة
+        car_documents = Document.objects.filter(car=obj)  # type: ignore
+        
+        images = []
+        for doc in car_documents:
+            if doc.file:
+                # بناء الـ URL الكامل للصورة
+                image_url = None
+                if hasattr(self, 'context') and 'request' in self.context:
+                    request = self.context['request']
+                    image_url = request.build_absolute_uri(doc.file.url)
+                else:
+                    image_url = doc.file.url
+                
+                images.append({
+                    'id': doc.id,
+                    'url': image_url,
+                    'document_type': doc.document_type.name if doc.document_type else None,
+                    'status': doc.status,
+                    'upload_date': doc.upload_date
+                })
+        
+        return images
