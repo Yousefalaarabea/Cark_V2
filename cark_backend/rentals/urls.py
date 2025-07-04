@@ -9,5 +9,5 @@ urlpatterns = [
     path('', views.home, name='home'),  # مثال على رابط
     path('', include(router.urls)),
     # New card deposit payment API (same as self-drive)
-    path('rentals/<int:rental_id>/new_card_deposit_payment/', views.NewCardDepositPaymentView.as_view(), name='new_card_deposit_payment'),
+    path('rentals/<int:rental_id>/new_card_deposit_payment/', views.NewCardDepositPaymentView.as_view(), name='new_card_deposit_payment'),  # type: ignore
 ]

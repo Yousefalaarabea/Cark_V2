@@ -89,7 +89,8 @@ class RentalSerializer(serializers.ModelSerializer):
             'id', 'renter', 'car', 'start_date', 'end_date', 'status',
             'rental_type',
             'pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng', 'pickup_address', 'dropoff_address',
-            'payment_method', 'selected_card', 'created_at', 'updated_at', 'planned_trip', 'payment_info', 'breakdown'
+            'payment_method', 'selected_card', 'created_at', 'updated_at', 'planned_trip', 'payment_info', 'breakdown',
+            'owner_arrival_confirmed', 'owner_arrived_at_pickup', 'renter_on_way_announced', 'renter_on_way_announced_at'
         ]
 
 # Serializer لإنشاء/تحديث الحجز مع المحطات

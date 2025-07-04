@@ -39,6 +39,10 @@ class Rental(models.Model):
     owner_arrived_at_pickup = models.DateTimeField(null=True, blank=True, help_text="When owner confirmed arrival at pickup location")
     owner_arrival_confirmed = models.BooleanField(default=False, help_text="Whether owner confirmed arrival at pickup location")  # type: ignore
     
+    # Renter on the way confirmation
+    renter_on_way_announced = models.BooleanField(default=False, help_text="Whether renter announced they are on the way")  # type: ignore
+    renter_on_way_announced_at = models.DateTimeField(null=True, blank=True, help_text="When renter announced they are on the way")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):

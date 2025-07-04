@@ -50,8 +50,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "annie-township-phoenix-means.trycloudflare.com",
+    "start-heading-ships-translations.trycloudflare.com",
     "127.0.0.1",
+    "structure-blvd-klein-digit.trycloudflare.com",
+    
 ]
 
 
@@ -183,6 +185,7 @@ PAYMOB_BASE_URL = "https://accept.paymob.com/api"
 #PAYMOB_INTENTION_BASE_URL = "https://flashapi.paymob.com"
 # PAYMOB_INTEGRATION_ID_WALLET = "5165985"
 PAYMOB_INTEGRATION_ID_CARD = "5149124"
+PAYMOB_INTEGRATION_ID_SAVED_CARD = "5149124"  # نفس integration ID للكارت المحفوظ
 PAYMOB_IFRAME_ID = "933671"
 PAYMOB_HMAC_SECRET = "BCA25D42BBFBC1AD1A09AEFF78FDECE0"
 PAYMOB_INTEGRATION_ID_MOTO = "5168455"

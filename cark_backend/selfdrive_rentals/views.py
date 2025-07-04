@@ -1198,6 +1198,127 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         serializer = SelfDriveRentalSerializer(rental)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'], url_path='review_for_owner')
+    def review_for_owner(self, request, pk=None):
+        """
+        يعرض كل تفاصيل الحجز للمالك قبل القبول أو الرفض (self-drive)
+        """
+        rental = self.get_object()
+        user = request.user
+        
+        # تحقق أن المستخدم هو المالك
+        if rental.car.owner != user:
+            return Response({
+                'error_code': 'NOT_OWNER',
+                'error_message': 'فقط مالك السيارة يمكنه مراجعة تفاصيل الحجز.'
+            }, status=403)
+        
+        # بيانات المستأجر
+        renter = rental.renter
+        renter_info = {
+            'id': renter.id,
+            'name': renter.get_full_name() or renter.email,
+            'email': renter.email,
+            'phone': renter.phone_number,
+            'avg_rating': getattr(renter, 'avg_rating', None),
+            'total_reviews': getattr(renter, 'total_reviews', None),
+            'reports_count': getattr(renter, 'reports_count', None),
+            'national_id': getattr(renter, 'national_id', None),
+        }
+        
+        # بيانات السيارة
+        car = rental.car
+        car_info = {
+            'id': car.id,
+            'brand': car.brand,
+            'model': car.model,
+            'year': car.year,
+            'category': getattr(car, 'category', None),
+            'type': getattr(car, 'car_type', None),
+            'plate_number': getattr(car, 'plate_number', None),
+        }
+        
+        # بيانات التكلفة
+        breakdown = getattr(rental, 'breakdown', None)
+        cost_info = {
+            'num_days': breakdown.num_days if breakdown else None,
+            'daily_price': float(breakdown.daily_price) if breakdown else None,
+            'base_cost': float(breakdown.base_cost) if breakdown else None,
+            'ctw_fee': float(breakdown.ctw_fee) if breakdown else None,
+            'initial_cost': float(breakdown.initial_cost) if breakdown else None,
+            'final_cost': float(breakdown.final_cost) if breakdown else None,
+            'allowed_km': float(breakdown.allowed_km) if breakdown else None,
+            'extra_km_cost': float(breakdown.extra_km_cost) if breakdown else None,
+            'commission_rate': float(breakdown.commission_rate) if breakdown else None,
+            'platform_earnings': float(breakdown.platform_earnings) if breakdown else None,
+            'driver_earnings': float(breakdown.driver_earnings) if breakdown else None,
+        }
+        
+        # بيانات الدفع
+        payment = getattr(rental, 'payment', None)
+        payment_info = {
+            'deposit_amount': float(payment.deposit_amount) if payment else None,
+            'deposit_paid_status': payment.deposit_paid_status if payment else None,
+            'remaining_amount': float(payment.remaining_amount) if payment else None,
+            'remaining_paid_status': payment.remaining_paid_status if payment else None,
+            'payment_method': payment.payment_method if payment else None,
+            'rental_total_amount': float(payment.rental_total_amount) if payment else None,
+        }
+        
+        # بيانات العداد
+        odometer_images = rental.odometer_images.all()
+        odometer_info = [
+            {
+                'id': img.id,
+                'type': img.type,
+                'value': float(img.value) if img.value else None,
+                'image_url': img.image.url if img.image else None,
+                'uploaded_at': img.uploaded_at,
+            }
+            for img in odometer_images
+        ]
+        
+        # بيانات العقد
+        contract = getattr(rental, 'contract', None)
+        contract_info = {
+            'signed_by_renter': contract.signed_by_renter if contract else False,
+            'signed_by_owner': contract.signed_by_owner if contract else False,
+            'signed_at': contract.signed_at if contract else None,
+            'renter_pickup_done': contract.renter_pickup_done if contract else False,
+            'owner_pickup_done': contract.owner_pickup_done if contract else False,
+            'renter_return_done': contract.renter_return_done if contract else False,
+            'owner_return_done': contract.owner_return_done if contract else False,
+        }
+        
+        # بيانات الموقع
+        live_location = rental.live_locations.last()
+        location_info = {
+            'latitude': float(live_location.latitude) if live_location else None,
+            'longitude': float(live_location.longitude) if live_location else None,
+            'timestamp': live_location.timestamp if live_location else None,
+        }
+        
+        # الرد النهائي - النقاط الأساسية فقط
+        return Response({
+            'rental_id': rental.id,
+            'status': rental.status,
+            'start_date': rental.start_date,
+            'end_date': rental.end_date,
+            'pickup_address': rental.pickup_address,
+            'dropoff_address': rental.dropoff_address,
+            'renter_name': renter.get_full_name() or renter.email,
+            'renter_phone': renter.phone_number,
+            'renter_rating': getattr(renter, 'avg_rating', 0),
+            'car_info': f"{car.brand} {car.model} {car.year}",
+            'num_days': breakdown.num_days if breakdown else 0,
+            'daily_price': float(breakdown.daily_price) if breakdown else 0,
+            'total_cost': float(breakdown.final_cost) if breakdown else 0,
+            'deposit_amount': float(payment.deposit_amount) if payment else 0,
+            'driver_earnings': float(breakdown.driver_earnings) if breakdown else 0,
+            'can_confirm': rental.status == 'PendingOwnerConfirmation',
+            'can_reject': rental.status == 'PendingOwnerConfirmation'
+        })
+
 def get_random_lat_lng():
     # توليد إحداثيات عشوائية داخل مصر (مثال)
     lat = round(random.uniform(22.0, 31.0), 6)
