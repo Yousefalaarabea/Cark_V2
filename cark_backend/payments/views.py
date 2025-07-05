@@ -26,6 +26,33 @@ from decimal import Decimal
 
 User = get_user_model()
 
+def get_car_images(car, request):
+    """Get car images from documents"""
+    try:
+        from documents.models import Document
+        car_images = []
+        car_documents = Document.objects.filter(car=car)
+        
+        for doc in car_documents:
+            if hasattr(doc, 'file') and doc.file and doc.file.name:
+                try:
+                    if doc.file.storage.exists(doc.file.name) and not doc.file.name.endswith('/'):
+                        if doc.file.url and not doc.file.url.endswith('/'):
+                            image_url = request.build_absolute_uri(doc.file.url) if request else doc.file.url
+                            car_images.append({
+                                'id': doc.id,
+                                'url': image_url,
+                                'type': doc.document_type.name if doc.document_type else 'Unknown',
+                                'filename': doc.file.name
+                            })
+                except Exception as img_error:
+                    print(f"Error processing image {doc.id}: {str(img_error)}")
+                    continue
+        return car_images
+    except Exception as e:
+        print(f"Error getting car images: {str(e)}")
+        return []
+
 
 class StartPaymentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -49,8 +76,16 @@ class StartPaymentView(APIView):
 
         reference = str(uuid.uuid4())
         user_id = str(request.user.id)
+        
+        # Get rental_id and rental_type from request if available
+        rental_id = request.data.get("rental_id")
+        rental_type = request.data.get("rental_type", "rental")
+        
         if purpose == "wallet_recharge":
             merchant_order_id_with_user = f"wallet_recharge_{reference}_{user_id}"
+        elif rental_id:
+            # Include rental_id in merchant_order_id for better tracking
+            merchant_order_id_with_user = f"{rental_type}_deposit_{rental_id}_{reference}_{user_id}"
         else:
             merchant_order_id_with_user = f"{reference}_{user_id}"
 
@@ -201,17 +236,72 @@ def paymob_webhook(request):
         if card_token and paymob_order_id:
             user_obj = None
             try:
-                # Find the corresponding PaymentTransaction to get the user
-                # We need to find the user based on the paymob_order_id
-                transaction_in_db = PaymentTransaction.objects.filter(paymob_order_id=paymob_order_id).first()
-                if transaction_in_db:
-                    user_obj = transaction_in_db.user
-                    print(f"Found user {user_obj.id} from existing transaction for Paymob order {paymob_order_id}.")
-                else:
-                    print(f"No existing transaction found for Paymob order {paymob_order_id} to link token to a user.")
+                # Try to find user from merchant_order_id in the TOKEN webhook
+                # The merchant_order_id should be available in the order data
+                merchant_order_id = token_obj_data.get("merchant_order_id", "")
+                
+                # If not in token_obj_data, try to get from order data
+                if not merchant_order_id and "order" in token_obj_data:
+                    order_data = token_obj_data.get("order", {})
+                    merchant_order_id = order_data.get("merchant_order_id", "")
+                
+                # If still not found, try to get from payment_key_claims
+                if not merchant_order_id and "payment_key_claims" in token_obj_data:
+                    payment_key_claims = token_obj_data.get("payment_key_claims", {})
+                    user_id_from_claims = payment_key_claims.get("user_id")
+                    if user_id_from_claims:
+                        try:
+                            user_obj = User.objects.get(id=user_id_from_claims)
+                            print(f"✅ Found user {user_obj.id} from payment_key_claims for Paymob order {paymob_order_id}.")
+                        except User.DoesNotExist:
+                            print(f"❌ User with ID {user_id_from_claims} not found from payment_key_claims.")
+                
+                # If still not found, try to get from the order_id by looking up the order
+                if not user_obj and paymob_order_id:
+                    try:
+                        # Try to find the order in our database by order_id
+                        from selfdrive_rentals.models import SelfDrivePayment
+                        payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()
+                        if payment_obj and payment_obj.rental and payment_obj.rental.renter:
+                            user_obj = payment_obj.rental.renter
+                            print(f"✅ Found user {user_obj.id} from SelfDrivePayment for Paymob order {paymob_order_id}.")
+                    except Exception as e:
+                        print(f"❌ Error finding user from SelfDrivePayment: {e}")
+                
+                print(f"🔍 TOKEN webhook - merchant_order_id: {merchant_order_id}")
+                
+                if merchant_order_id:
+                    parts = merchant_order_id.split('_')
+                    print(f"🔍 TOKEN webhook - parts: {parts}")
+                    
+                    if len(parts) >= 5:  # rental_type_deposit_rental_id_reference_user_id
+                        user_uuid = parts[-1]  # user_id is the last part
+                        try:
+                            user_obj = User.objects.get(id=user_uuid)
+                            print(f"✅ Found user {user_obj.id} from merchant_order_id for Paymob order {paymob_order_id}.")
+                        except User.DoesNotExist:
+                            print(f"❌ User with ID {user_uuid} not found for merchant_order_id {merchant_order_id}.")
+                    elif len(parts) >= 2:  # reference_user_id (fallback format)
+                        user_uuid = parts[-1]  # user_id is the last part
+                        try:
+                            user_obj = User.objects.get(id=user_uuid)
+                            print(f"✅ Found user {user_obj.id} from fallback merchant_order_id format for Paymob order {paymob_order_id}.")
+                        except User.DoesNotExist:
+                            print(f"❌ User with ID {user_uuid} not found for fallback merchant_order_id {merchant_order_id}.")
+                    else:
+                        print(f"⚠️ Invalid merchant_order_id format: {merchant_order_id}")
+                
+                # Fallback: Try to find from PaymentTransaction (if exists)
+                if not user_obj:
+                    transaction_in_db = PaymentTransaction.objects.filter(paymob_order_id=paymob_order_id).first()
+                    if transaction_in_db:
+                        user_obj = transaction_in_db.user
+                        print(f"✅ Found user {user_obj.id} from existing transaction for Paymob order {paymob_order_id}.")
+                    else:
+                        print(f"⚠️ No existing transaction found for Paymob order {paymob_order_id} to link token to a user.")
 
             except Exception as e:
-                print(f"❌ Error finding transaction for TOKEN webhook: {e}")
+                print(f"❌ Error finding user for TOKEN webhook: {e}")
 
             if user_obj:
                 try:
@@ -342,18 +432,52 @@ def paymob_webhook(request):
         # So we remove the token saving logic here to avoid redundancy/confusion.
 
         # Update the response payload for TRANSACTION type webhook
-        # --- تحديث SelfDrivePayment عند نجاح دفع الديبوزيت بكارت جديد ---
+        # --- تحديث SelfDrivePayment عند نجاح دفع الديبوزيت بكارت جديد أو محفوظ ---
         try:
             from selfdrive_rentals.models import SelfDrivePayment
             # ابحث عن SelfDrivePayment الذي يحمل deposit_transaction_id = order_id أو paymob_order_id
             paymob_order_id = order_data.get("id")
             transaction_id = transaction_data.get("id")
             amount_cents = int(transaction_data.get("amount_cents", 0))
+            print(f"🔍 Searching for SelfDrivePayment with order_id: {paymob_order_id}")
             # ابحث أولاً بالـ order_id (تم حفظه مؤقتًا في deposit_transaction_id)
             payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()
+            if payment_obj:
+                print(f"✅ Found payment_obj by order_id: {payment_obj.id}")
             if not payment_obj:
+                print(f"🔍 Searching for SelfDrivePayment with transaction_id: {transaction_id}")
                 # جرب البحث بالـ transaction_id
                 payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=transaction_id).first()
+                if payment_obj:
+                    print(f"✅ Found payment_obj by transaction_id: {payment_obj.id}")
+            if not payment_obj:
+                print(f"🔍 Searching for SelfDrivePayment with merchant_order_id: {merchant_order_id}")
+                # جرب البحث بالـ merchant_order_id (للـ selfdrive)
+                if merchant_order_id.startswith("selfdrive_deposit_"):
+                    merchant_parts = merchant_order_id.split('_')
+                    if len(merchant_parts) >= 4:
+                        rental_id = merchant_parts[2]  # rental_id is the 3rd part
+                        print(f"🔍 Extracted rental_id: {rental_id}")
+                        payment_obj = SelfDrivePayment.objects.filter(rental_id=rental_id).first()
+                        if payment_obj:
+                            print(f"✅ Found payment_obj by rental_id: {payment_obj.id}")
+                        else:
+                            print(f"❌ No payment_obj found by rental_id: {rental_id}")
+                    else:
+                        print(f"❌ Invalid merchant_order_id format: {merchant_order_id}")
+                else:
+                    print(f"❌ merchant_order_id doesn't start with 'selfdrive_deposit_': {merchant_order_id}")
+            if not payment_obj:
+                print(f"🔍 Trying to find payment by order_id in all SelfDrivePayments...")
+                # جرب البحث في كل الـ SelfDrivePayments بالـ order_id
+                all_payments = SelfDrivePayment.objects.all()
+                for payment in all_payments:
+                    if str(payment.deposit_transaction_id) == str(paymob_order_id):
+                        payment_obj = payment
+                        print(f"✅ Found payment_obj by searching all payments: {payment_obj.id}")
+                        break
+                if not payment_obj:
+                    print(f"❌ No payment_obj found for any method")
             if payment_obj and amount_cents == int(round(float(payment_obj.deposit_amount) * 100)):
                 if transaction_data.get("success", False):
                     payment_obj.deposit_paid_status = 'Paid'
@@ -374,6 +498,16 @@ def paymob_webhook(request):
                         car_name = f"{rental.car.brand} {rental.car.model}"
                         owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
                         
+                        # Determine payment method (new card or saved card)
+                        payment_method = "new_card"
+                        card_last4 = source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****"
+                        card_brand = source_data.get("type", "Card").title()
+                        
+                        # Check if this is a saved card payment
+                        if source_data.get("type") and source_data.get("pan"):
+                            # This is likely a saved card payment
+                            payment_method = "saved_card"
+                        
                         # Notification data for owner pickup handover (self-drive)
                         notification_data = {
                             "rentalId": rental.id,
@@ -388,17 +522,45 @@ def paymob_webhook(request):
                             "carName": car_name,
                             "depositAmount": float(payment_obj.deposit_amount),
                             "transactionId": transaction_id,
-                            "paymentMethod": "new_card",
-                            "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
-                            "cardBrand": source_data.get("type", "Card").title(),
+                            "paymentMethod": payment_method,
+                            "cardLast4": card_last4,
+                            "cardBrand": card_brand,
+                            
+                            # Complete car details
+                            "carDetails": {
+                                "plateNumber": rental.car.plate_number,
+                                "brand": rental.car.brand,
+                                "model": rental.car.model,
+                                "year": rental.car.year,
+                                "color": rental.car.color,
+                                "carType": rental.car.car_type,
+                                "carCategory": rental.car.car_category,
+                                "transmissionType": rental.car.transmission_type,
+                                "fuelType": rental.car.fuel_type,
+                                "seatingCapacity": rental.car.seating_capacity,
+                                "currentOdometer": rental.car.current_odometer_reading,
+                                "avgRating": float(rental.car.avg_rating),
+                                "totalReviews": rental.car.total_reviews,
+                                "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                                "images": get_car_images(rental.car, request)
+                            },
+                            
+                            # Renter details
+                            "renterDetails": {
+                                "name": renter_name,
+                                "phone": rental.renter.phone_number,
+                                "email": rental.renter.email,
+                                "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                                "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                            },
                             
                             # Payment details for owner pickup handover
                             "remainingAmount": float(payment_obj.remaining_amount),
                             "totalAmount": float(payment_obj.rental_total_amount),
-                            "rentalPaymentMethod": rental.payment_method,
-                            "cashCollectionRequired": rental.payment_method == 'cash',
-                            "cashAmountToCollect": float(payment_obj.remaining_amount) if rental.payment_method == 'cash' else 0,
-                            "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                            "rentalPaymentMethod": getattr(rental, 'payment_method', 'visa'),  # Default to visa for self-drive
+                            "cashCollectionRequired": getattr(rental, 'payment_method', 'visa') == 'cash',
+                            "cashAmountToCollect": float(payment_obj.remaining_amount) if getattr(rental, 'payment_method', 'visa') == 'cash' else 0,
+                            "automaticPayment": getattr(rental, 'payment_method', 'visa') in ['visa', 'wallet'],
                             "selectedCardInfo": {
                                 "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
                                 "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
@@ -421,31 +583,31 @@ def paymob_webhook(request):
                                 "Verify renter identity",
                                 "Check car condition before handover",
                                 "Confirm pickup location",
-                                "Collect cash payment" if rental.payment_method == 'cash' else "Payment will be processed automatically",
+                                "Collect cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Payment will be processed automatically",
                                 "Start trip tracking"
                             ],
                             "nextAction": "owner_pickup_handover",
                             
                             # Owner pickup handover specific data
-                            "handoverType": "cash_collection" if rental.payment_method == 'cash' else "automatic_payment",
-                            "handoverMessage": f"Collect {float(payment_obj.remaining_amount)} EGP in cash from renter" if rental.payment_method == 'cash' else "No cash collection needed - payment will be processed automatically",
-                            "handoverStatus": "pending_cash_collection" if rental.payment_method == 'cash' else "automatic_payment_setup",
+                            "handoverType": "cash_collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "automatic_payment",
+                            "handoverMessage": f"Collect {float(payment_obj.remaining_amount)} EGP in cash from renter" if getattr(rental, 'payment_method', 'visa') == 'cash' else "No cash collection needed - payment will be processed automatically",
+                            "handoverStatus": "pending_cash_collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "automatic_payment_setup",
                             "handoverActions": [
                                 "Confirm renter identity",
                                 "Inspect car condition",
-                                "Collect cash payment" if rental.payment_method == 'cash' else "Verify automatic payment setup",
+                                "Collect cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Verify automatic payment setup",
                                 "Start trip"
                             ],
                             "handoverNotes": [
                                 f"Deposit paid: {float(payment_obj.deposit_amount)} EGP",
                                 f"Remaining amount: {float(payment_obj.remaining_amount)} EGP",
-                                f"Payment method: {rental.payment_method.upper()}",
+                                f"Payment method: {getattr(rental, 'payment_method', 'visa').upper()}",
                                 f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
                                 f"Pickup location: {rental.pickup_address}",
                                 f"Dropoff location: {rental.dropoff_address}"
                             ],
                             "handoverWarnings": [
-                                "Ensure you have proper change for cash payment" if rental.payment_method == 'cash' else "Payment will be charged automatically at trip end",
+                                "Ensure you have proper change for cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Payment will be charged automatically at trip end",
                                 "Verify renter's driving license",
                                 "Check car fuel level before handover",
                                 "Document any existing damage"
@@ -456,15 +618,15 @@ def paymob_webhook(request):
                                 "✅ Car condition inspection",
                                 "✅ Fuel level confirmation",
                                 "✅ Damage documentation",
-                                "✅ Cash collection" if rental.payment_method == 'cash' else "✅ Payment method verification",
+                                "✅ Cash collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "✅ Payment method verification",
                                 "✅ Trip start confirmation"
                             ],
                             "handoverSummary": {
                                 "totalEarnings": float(payment_obj.owner_earnings) if hasattr(payment_obj, 'owner_earnings') else 0,
                                 "platformCommission": float(payment_obj.platform_fee) if hasattr(payment_obj, 'platform_fee') else 0,
                                 "commissionPercentage": 20.0,
-                                "cashToCollect": float(payment_obj.remaining_amount) if rental.payment_method == 'cash' else 0,
-                                "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                                "cashToCollect": float(payment_obj.remaining_amount) if getattr(rental, 'payment_method', 'visa') == 'cash' else 0,
+                                "automaticPayment": getattr(rental, 'payment_method', 'visa') in ['visa', 'wallet'],
                                 "tripDuration": f"{(rental.end_date.date() - rental.start_date.date()).days + 1} days",
                                 "pickupTime": rental.start_date.strftime("%Y-%m-%d %H:%M"),
                                 "dropoffTime": rental.end_date.strftime("%Y-%m-%d %H:%M")
@@ -473,18 +635,22 @@ def paymob_webhook(request):
                         
                         # Notification for owner (self-drive)
                         try:
-                            Notification.objects.create(
+                            print(f"🔍 Attempting to create notification for owner: {rental.car.owner.id}")
+                            print(f"🔍 Notification data keys: {list(notification_data.keys())}")
+                            
+                            # Notification for owner - more interactive and action-oriented
+                            owner_notification = Notification.objects.create(
                                 sender=rental.renter,
                                 receiver=rental.car.owner,
-                                title="Deposit Payment Received",
-                                message=f"{renter_name} has paid the deposit of {payment_obj.deposit_amount} EGP for {car_name} using new card",
+                                title="💰 Deposit Payment Received - Action Required",
+                                message=f"Great news! {renter_name} has successfully paid the deposit of {payment_obj.deposit_amount} EGP for your {car_name}. Your rental is now confirmed and ready for pickup. Please proceed with the handover process.",
                                 notification_type="PAYMENT",
                                 priority="HIGH",
                                 data=notification_data,
                                 navigation_id="DEP_OWNER",
                                 is_read=False
                             )
-                            print(f"✅ Self-drive owner notification created successfully in webhook")
+                            print(f"✅ Self-drive owner notification created successfully in webhook with ID: {owner_notification.id}")
                         except Exception as e:
                             print(f"❌ Error creating self-drive owner notification in webhook: {e}")
                             import traceback
@@ -503,24 +669,25 @@ def paymob_webhook(request):
                             "ownerName": owner_name,
                             "depositAmount": float(payment_obj.deposit_amount),
                             "transactionId": transaction_id,
-                            "paymentMethod": "new_card",
-                            "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
-                            "cardBrand": source_data.get("type", "Card").title(),
+                            "paymentMethod": payment_method,
+                            "cardLast4": card_last4,
+                            "cardBrand": card_brand,
                         }
                         
                         try:
-                            Notification.objects.create(
+                            # Notification for renter - confirmation and next steps
+                            renter_notification = Notification.objects.create(
                                 sender=rental.car.owner,
                                 receiver=rental.renter,
-                                title="Deposit Payment Confirmed",
-                                message=f"Your deposit payment of {payment_obj.deposit_amount} EGP for {car_name} has been confirmed",
+                                title="✅ Deposit Payment Confirmed",
+                                message=f"Thank you for paying the deposit of {payment_obj.deposit_amount} EGP for {car_name} using {payment_method.replace('_', ' ')}. Your rental is now confirmed and ready for pickup on {rental.start_date.strftime('%Y-%m-%d at %H:%M')}. Please contact the owner to arrange the handover.",
                                 notification_type="PAYMENT",
                                 priority="HIGH",
                                 data=renter_notification_data,
-                                navigation_id="REN_ONT_TRP",
+                                navigation_id="RENTAL_CONFIRMED",
                                 is_read=False
                             )
-                            print(f"✅ Self-drive renter notification created successfully in webhook")
+                            print(f"✅ Self-drive renter notification created successfully in webhook with ID: {renter_notification.id}")
                         except Exception as e:
                             print(f"❌ Error creating self-drive renter notification in webhook: {e}")
                             import traceback
@@ -679,13 +846,28 @@ def paymob_webhook(request):
                                     }
                                 }
                                 
+                                # Determine payment method (new card or saved card)
+                                payment_method = "new_card"
+                                card_last4 = source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****"
+                                card_brand = source_data.get("type", "Card").title()
+                                
+                                # Check if this is a saved card payment
+                                if source_data.get("type") and source_data.get("pan"):
+                                    # This is likely a saved card payment
+                                    payment_method = "saved_card"
+                                
+                                # Update notification data with correct payment method
+                                notification_data["paymentMethod"] = payment_method
+                                notification_data["cardLast4"] = card_last4
+                                notification_data["cardBrand"] = card_brand
+                                
                                 # Notification for owner
                                 try:
                                     Notification.objects.create(
                                         sender=rental.renter,
                                         receiver=rental.car.owner,
                                         title="Deposit Payment Received",
-                                        message=f"{renter_name} has paid the deposit of {payment_obj.deposit_amount} EGP for {car_name} using new card",
+                                        message=f"{renter_name} has paid the deposit of {payment_obj.deposit_amount} EGP for {car_name} using {payment_method.replace('_', ' ')}",
                                         notification_type="PAYMENT",
                                         priority="HIGH",
                                         data=notification_data,
@@ -711,9 +893,9 @@ def paymob_webhook(request):
                                     "ownerName": owner_name,
                                     "depositAmount": float(payment_obj.deposit_amount),
                                     "transactionId": transaction_id,
-                                    "paymentMethod": "new_card",
-                                    "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
-                                    "cardBrand": source_data.get("type", "Card").title(),
+                                    "paymentMethod": payment_method,
+                                    "cardLast4": card_last4,
+                                    "cardBrand": card_brand,
                                 }
                                 
                                 try:
@@ -950,7 +1132,16 @@ class ChargeSavedCardView(APIView):
             return Response({"error": "Invalid amount_cents value."}, status=400)
         reference = str(uuid.uuid4())
         user_id = str(request.user.id)
-        merchant_order_id_with_user = f"{reference}_{user_id}"
+        
+        # Get rental_id from request if available
+        rental_id = request.data.get("rental_id")
+        rental_type = request.data.get("rental_type", "rental")
+        
+        if rental_id:
+            # Include rental_id in merchant_order_id for better tracking
+            merchant_order_id_with_user = f"{rental_type}_deposit_{rental_id}_{reference}_{user_id}"
+        else:
+            merchant_order_id_with_user = f"{reference}_{user_id}"
         try:
             auth_token = paymob.get_auth_token()
             order_id = paymob.create_order(auth_token, amount_cents, merchant_order_id_with_user)
@@ -980,6 +1171,270 @@ class ChargeSavedCardView(APIView):
                 success = success.lower() == "true"
             card_type = charge_response.get("source_data.sub_type") or getattr(card, 'card_brand', None)
             card_pan = charge_response.get("source_data.pan") or getattr(card, 'card_last_four_digits', None)
+            
+            # Send notifications for saved card deposit payment
+            if success:
+                try:
+                    from notifications.models import Notification
+                    from selfdrive_rentals.models import SelfDrivePayment
+                    from rentals.models import RentalPayment
+                    
+                    # Try to find the payment object for this transaction
+                    amount_egp = amount_cents / 100
+                    
+                    # Check for self-drive rental payment
+                    payment_obj = SelfDrivePayment.objects.filter(
+                        deposit_transaction_id=order_id,
+                        deposit_amount=amount_egp
+                    ).first()
+                    
+                    if not payment_obj:
+                        # Check for regular rental payment
+                        payment_obj = RentalPayment.objects.filter(
+                            deposit_transaction_id=order_id,
+                            deposit_amount=amount_egp
+                        ).first()
+                    
+                    # If payment object not found, try to find by rental_id from merchant_order_id
+                    if not payment_obj:
+                        # Extract rental_id from merchant_order_id if it exists
+                        merchant_parts = merchant_order_id_with_user.split('_')
+                        if len(merchant_parts) >= 4:  # rental_type_deposit_rental_id_reference_user_id
+                            try:
+                                rental_type = merchant_parts[0]
+                                rental_id = merchant_parts[2]  # rental_id is the 3rd part
+                                
+                                if rental_type == "selfdrive":
+                                    # Try to find self-drive rental
+                                    from selfdrive_rentals.models import SelfDriveRental
+                                    rental = SelfDriveRental.objects.filter(id=rental_id).first()
+                                    if rental and hasattr(rental, 'payment'):
+                                        payment_obj = rental.payment
+                                        # Update the payment object with order_id
+                                        payment_obj.deposit_transaction_id = order_id
+                                        payment_obj.save()
+                                else:
+                                    # Try to find regular rental
+                                    from rentals.models import Rental
+                                    rental = Rental.objects.filter(id=rental_id).first()
+                                    if rental and hasattr(rental, 'payment_info'):
+                                        payment_obj = rental.payment_info
+                                        # Update the payment object with order_id
+                                        payment_obj.deposit_transaction_id = order_id
+                                        payment_obj.save()
+                            except (ValueError, IndexError):
+                                pass
+                    
+                    if payment_obj:
+                        print(f"🔍 Found payment_obj: {payment_obj.id}, rental: {payment_obj.rental.id}")
+                        
+                        # Update payment status
+                        payment_obj.deposit_paid_status = 'Paid'
+                        payment_obj.deposit_paid_at = timezone.now()
+                        payment_obj.deposit_transaction_id = charge_response.get("id")
+                        payment_obj.save()
+                        
+                        # Update rental status to Confirmed
+                        payment_obj.rental.status = 'Confirmed'
+                        payment_obj.rental.save()
+                        
+                        print(f"✅ Updated payment and rental status for saved card payment")
+                        
+                        # Get rental details
+                        rental = payment_obj.rental
+                        renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
+                        car_name = f"{rental.car.brand} {rental.car.model}"
+                        owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
+                        
+                        # Notification data for owner pickup handover
+                        notification_data = {
+                            "rentalId": rental.id,
+                            "renterId": rental.renter.id,
+                            "carId": rental.car.id,
+                            "status": rental.status,
+                            "startDate": rental.start_date.isoformat(),
+                            "endDate": rental.end_date.isoformat(),
+                            "pickupAddress": rental.pickup_address,
+                            "dropoffAddress": rental.dropoff_address,
+                            "renterName": renter_name,
+                            "carName": car_name,
+                            "depositAmount": float(payment_obj.deposit_amount),
+                            "transactionId": charge_response.get("id"),
+                            "paymentMethod": "saved_card",
+                            "cardLast4": card.card_last_four_digits,
+                            "cardBrand": card.card_brand,
+                            
+                            # Complete car details
+                            "carDetails": {
+                                "plateNumber": rental.car.plate_number,
+                                "brand": rental.car.brand,
+                                "model": rental.car.model,
+                                "year": rental.car.year,
+                                "color": rental.car.color,
+                                "carType": rental.car.car_type,
+                                "carCategory": rental.car.car_category,
+                                "transmissionType": rental.car.transmission_type,
+                                "fuelType": rental.car.fuel_type,
+                                "seatingCapacity": rental.car.seating_capacity,
+                                "currentOdometer": rental.car.current_odometer_reading,
+                                "avgRating": float(rental.car.avg_rating),
+                                "totalReviews": rental.car.total_reviews,
+                                "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                                "images": get_car_images(rental.car, request)
+                            },
+                            
+                            # Renter details
+                            "renterDetails": {
+                                "name": renter_name,
+                                "phone": rental.renter.phone_number,
+                                "email": rental.renter.email,
+                                "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                                "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                            },
+                            
+                            # Payment details for owner pickup handover
+                            "remainingAmount": float(payment_obj.remaining_amount) if hasattr(payment_obj, 'remaining_amount') else 0,
+                            "totalAmount": float(payment_obj.rental_total_amount) if hasattr(payment_obj, 'rental_total_amount') else 0,
+                            "rentalPaymentMethod": getattr(rental, 'payment_method', 'visa'),  # Default to visa for self-drive
+                            "cashCollectionRequired": getattr(rental, 'payment_method', 'visa') == 'cash',
+                            "cashAmountToCollect": float(payment_obj.remaining_amount) if (hasattr(payment_obj, 'remaining_amount') and getattr(rental, 'payment_method', 'visa') == 'cash') else 0,
+                            "automaticPayment": getattr(rental, 'payment_method', 'visa') in ['visa', 'wallet'],
+                            "selectedCardInfo": {
+                                "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                                "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                                "cardId": rental.selected_card.id if rental.selected_card else None
+                            } if rental.selected_card else None,
+                            
+                            # Trip details
+                            "plannedKm": float(rental.planned_km) if hasattr(rental, 'planned_km') else 0,
+                            "dailyPrice": float(rental.daily_price) if hasattr(rental, 'daily_price') else 0,
+                            "totalDays": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                            "rentalType": "self_drive" if hasattr(rental, 'planned_km') else rental.rental_type,
+                            
+                            # Owner earnings info
+                            "ownerEarnings": float(payment_obj.owner_earnings) if hasattr(payment_obj, 'owner_earnings') else 0,
+                            "platformFee": float(payment_obj.platform_fee) if hasattr(payment_obj, 'platform_fee') else 0,
+                            "commissionRate": 0.2,
+                            
+                            # Handover instructions
+                            "handoverInstructions": [
+                                "Verify renter identity",
+                                "Check car condition before handover",
+                                "Confirm pickup location",
+                                "Collect cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Payment will be processed automatically",
+                                "Start trip tracking"
+                            ],
+                            "nextAction": "owner_confirm_arrival" if not getattr(rental, 'owner_arrival_confirmed', False) else "start_trip",
+                            
+                            # Owner pickup handover specific data
+                            "handoverType": "cash_collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "automatic_payment",
+                            "handoverMessage": f"Collect {float(payment_obj.remaining_amount) if hasattr(payment_obj, 'remaining_amount') else 0} EGP in cash from renter" if getattr(rental, 'payment_method', 'visa') == 'cash' else "No cash collection needed - payment will be processed automatically",
+                            "handoverStatus": "pending_cash_collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "automatic_payment_setup",
+                            "handoverActions": [
+                                "Confirm renter identity",
+                                "Inspect car condition",
+                                "Collect cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Verify automatic payment setup",
+                                "Start trip"
+                            ],
+                            "handoverNotes": [
+                                f"Deposit paid: {float(payment_obj.deposit_amount)} EGP",
+                                f"Remaining amount: {float(payment_obj.remaining_amount) if hasattr(payment_obj, 'remaining_amount') else 0} EGP",
+                                f"Payment method: {getattr(rental, 'payment_method', 'visa').upper()}",
+                                f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                                f"Pickup location: {rental.pickup_address}",
+                                f"Dropoff location: {rental.dropoff_address}"
+                            ],
+                            "handoverWarnings": [
+                                "Ensure you have proper change for cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Payment will be charged automatically at trip end",
+                                "Verify renter's driving license",
+                                "Check car fuel level before handover",
+                                "Document any existing damage"
+                            ],
+                            "handoverChecklist": [
+                                "✅ Renter ID verification",
+                                "✅ Driving license check",
+                                "✅ Car condition inspection",
+                                "✅ Fuel level confirmation",
+                                "✅ Damage documentation",
+                                "✅ Cash collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "✅ Payment method verification",
+                                "✅ Trip start confirmation"
+                            ],
+                            "handoverSummary": {
+                                "totalEarnings": float(payment_obj.owner_earnings) if hasattr(payment_obj, 'owner_earnings') else 0,
+                                "platformCommission": float(payment_obj.platform_fee) if hasattr(payment_obj, 'platform_fee') else 0,
+                                "commissionPercentage": 20.0,
+                                "cashToCollect": float(payment_obj.remaining_amount) if (hasattr(payment_obj, 'remaining_amount') and getattr(rental, 'payment_method', 'visa') == 'cash') else 0,
+                                "automaticPayment": getattr(rental, 'payment_method', 'visa') in ['visa', 'wallet'],
+                                "tripDuration": f"{(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                                "pickupTime": rental.start_date.strftime("%Y-%m-%d %H:%M"),
+                                "dropoffTime": rental.end_date.strftime("%Y-%m-%d %H:%M")
+                            }
+                        }
+                        
+                        # Notification for owner
+                        try:
+                            Notification.objects.create(
+                                sender=rental.renter,
+                                receiver=rental.car.owner,
+                                title="Deposit Payment Received",
+                                message=f"{renter_name} has paid the deposit of {payment_obj.deposit_amount} EGP for {car_name} using saved card",
+                                notification_type="PAYMENT",
+                                priority="HIGH",
+                                data=notification_data,
+                                navigation_id="DEP_OWNER",
+                                is_read=False
+                            )
+                            print(f"✅ Owner notification created successfully for saved card payment")
+                        except Exception as e:
+                            print(f"❌ Error creating owner notification for saved card: {e}")
+                            import traceback
+                            traceback.print_exc()
+                        
+                        # Notification for renter (confirmation)
+                        renter_notification_data = {
+                            "rentalId": rental.id,
+                            "carId": rental.car.id,
+                            "status": rental.status,
+                            "startDate": rental.start_date.isoformat(),
+                            "endDate": rental.end_date.isoformat(),
+                            "pickupAddress": rental.pickup_address,
+                            "dropoffAddress": rental.dropoff_address,
+                            "carName": car_name,
+                            "ownerName": owner_name,
+                            "depositAmount": float(payment_obj.deposit_amount),
+                            "transactionId": charge_response.get("id"),
+                            "paymentMethod": "saved_card",
+                            "cardLast4": card.card_last_four_digits,
+                            "cardBrand": card.card_brand,
+                        }
+                        
+                        try:
+                            Notification.objects.create(
+                                sender=rental.car.owner,
+                                receiver=rental.renter,
+                                title="Deposit Payment Confirmed",
+                                message=f"Your deposit payment of {payment_obj.deposit_amount} EGP for {car_name} has been confirmed",
+                                notification_type="PAYMENT",
+                                priority="HIGH",
+                                data=renter_notification_data,
+                                navigation_id="REN_ONT_TRP",
+                                is_read=False
+                            )
+                            print(f"✅ Renter notification created successfully for saved card payment")
+                        except Exception as e:
+                            print(f"❌ Error creating renter notification for saved card: {e}")
+                            import traceback
+                            traceback.print_exc()
+                        
+                        print(f"✅ Notifications sent for rental {rental.id} saved card deposit payment")
+                    else:
+                        print(f"⚠️ Payment object not found for saved card payment with order_id: {order_id}")
+                        
+                except Exception as e:
+                    print(f"❌ Error sending notifications for saved card payment: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
             # PaymentTransaction.objects.create(...) (معلق)
             return Response({
                 "success": success,

@@ -121,7 +121,8 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 }
                 
                 # Create notification
-                notification = Notification.objects.create(
+                notification = Notification.objects.create(  # type: ignore
+                
                     sender=rental.renter,  # Renter is the sender
                     receiver=rental.car.owner,    # Car owner is the receiver
                     title="New Booking Request",
@@ -419,13 +420,41 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                         "cardLast4": card.card_last_four_digits if hasattr(card, 'card_last_four_digits') else "****",
                         "cardBrand": card.card_brand if hasattr(card, 'card_brand') else "Card",
                         
+                        # Complete car details
+                        "carDetails": {
+                            "plateNumber": rental.car.plate_number,
+                            "brand": rental.car.brand,
+                            "model": rental.car.model,
+                            "year": rental.car.year,
+                            "color": rental.car.color,
+                            "carType": rental.car.car_type,
+                            "carCategory": rental.car.car_category,
+                            "transmissionType": rental.car.transmission_type,
+                            "fuelType": rental.car.fuel_type,
+                            "seatingCapacity": rental.car.seating_capacity,
+                            "currentOdometer": rental.car.current_odometer_reading,
+                            "avgRating": float(rental.car.avg_rating),
+                            "totalReviews": rental.car.total_reviews,
+                            "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                            "images": self._get_car_images(rental.car, request)
+                        },
+                        
+                        # Renter details
+                        "renterDetails": {
+                            "name": renter_name,
+                            "phone": rental.renter.phone_number,
+                            "email": rental.renter.email,
+                            "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                            "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                        },
+                        
                         # Payment details for owner pickup handover
                         "remainingAmount": float(payment.remaining_amount),
                         "totalAmount": float(payment.rental_total_amount),
-                        "rentalPaymentMethod": rental.payment_method,
-                        "cashCollectionRequired": rental.payment_method == 'cash',
-                        "cashAmountToCollect": float(payment.remaining_amount) if rental.payment_method == 'cash' else 0,
-                        "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                        "rentalPaymentMethod": getattr(rental, 'payment_method', 'visa'),
+                        "cashCollectionRequired": getattr(rental, 'payment_method', 'visa') == 'cash',
+                        "cashAmountToCollect": float(payment.remaining_amount) if getattr(rental, 'payment_method', 'visa') == 'cash' else 0,
+                        "automaticPayment": getattr(rental, 'payment_method', 'visa') in ['visa', 'wallet'],
                         "selectedCardInfo": {
                             "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
                             "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
@@ -448,31 +477,31 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                             "Verify renter identity",
                             "Check car condition before handover",
                             "Confirm pickup location",
-                            "Collect cash payment" if rental.payment_method == 'cash' else "Payment will be processed automatically",
+                            "Collect cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Payment will be processed automatically",
                             "Start trip tracking"
                         ],
                         "nextAction": "owner_pickup_handover",
                         
                         # Owner pickup handover specific data
-                        "handoverType": "cash_collection" if rental.payment_method == 'cash' else "automatic_payment",
-                        "handoverMessage": f"Collect {float(payment.remaining_amount)} EGP in cash from renter" if rental.payment_method == 'cash' else "No cash collection needed - payment will be processed automatically",
-                        "handoverStatus": "pending_cash_collection" if rental.payment_method == 'cash' else "automatic_payment_setup",
+                        "handoverType": "cash_collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "automatic_payment",
+                        "handoverMessage": f"Collect {float(payment.remaining_amount)} EGP in cash from renter" if getattr(rental, 'payment_method', 'visa') == 'cash' else "No cash collection needed - payment will be processed automatically",
+                        "handoverStatus": "pending_cash_collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "automatic_payment_setup",
                         "handoverActions": [
                             "Confirm renter identity",
                             "Inspect car condition",
-                            "Collect cash payment" if rental.payment_method == 'cash' else "Verify automatic payment setup",
+                            "Collect cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Verify automatic payment setup",
                             "Start trip"
                         ],
                         "handoverNotes": [
                             f"Deposit paid: {float(payment.deposit_amount)} EGP",
                             f"Remaining amount: {float(payment.remaining_amount)} EGP",
-                            f"Payment method: {rental.payment_method.upper()}",
+                            f"Payment method: {getattr(rental, 'payment_method', 'visa').upper()}",
                             f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
                             f"Pickup location: {rental.pickup_address}",
                             f"Dropoff location: {rental.dropoff_address}"
                         ],
                         "handoverWarnings": [
-                            "Ensure you have proper change for cash payment" if rental.payment_method == 'cash' else "Payment will be charged automatically at trip end",
+                            "Ensure you have proper change for cash payment" if getattr(rental, 'payment_method', 'visa') == 'cash' else "Payment will be charged automatically at trip end",
                             "Verify renter's driving license",
                             "Check car fuel level before handover",
                             "Document any existing damage"
@@ -483,33 +512,59 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                             "✅ Car condition inspection",
                             "✅ Fuel level confirmation",
                             "✅ Damage documentation",
-                            "✅ Cash collection" if rental.payment_method == 'cash' else "✅ Payment method verification",
+                            "✅ Cash collection" if getattr(rental, 'payment_method', 'visa') == 'cash' else "✅ Payment method verification",
                             "✅ Trip start confirmation"
                         ],
                         "handoverSummary": {
                             "totalEarnings": float(payment.owner_earnings) if hasattr(payment, 'owner_earnings') else 0,
                             "platformCommission": float(payment.platform_fee) if hasattr(payment, 'platform_fee') else 0,
                             "commissionPercentage": 20.0,
-                            "cashToCollect": float(payment.remaining_amount) if rental.payment_method == 'cash' else 0,
-                            "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                            "cashToCollect": float(payment.remaining_amount) if getattr(rental, 'payment_method', 'visa') == 'cash' else 0,
+                            "automaticPayment": getattr(rental, 'payment_method', 'visa') in ['visa', 'wallet'],
                             "tripDuration": f"{(rental.end_date.date() - rental.start_date.date()).days + 1} days",
                             "pickupTime": rental.start_date.strftime("%Y-%m-%d %H:%M"),
                             "dropoffTime": rental.end_date.strftime("%Y-%m-%d %H:%M")
                         }
                     }
                     
-                    notification = Notification.objects.create(
+                    # Notification for owner - more interactive and action-oriented
+                    owner_notification = Notification.objects.create(
                         sender=rental.renter,
                         receiver=rental.car.owner,
-                        title="Deposit Payment Received",
-                        message=f"{renter_name} has paid the deposit of {payment.deposit_amount} EGP for {car_name} using saved card",
+                        title="💰 Deposit Payment Received - Action Required",
+                        message=f"Great news! {renter_name} has successfully paid the deposit of {payment.deposit_amount} EGP for your {car_name}. Your rental is now confirmed and ready for pickup. Please proceed with the handover process.",
                         notification_type="PAYMENT",
                         priority="HIGH",
                         data=notification_data,
                         navigation_id="DEP_OWNER",
                         is_read=False
                     )
-                    print(f"✅ Self-drive deposit notification created successfully: {notification.id}")
+                    
+                    # Notification for renter - confirmation and next steps
+                    renter_notification_data = {
+                        "rentalId": rental.id,
+                        "carName": car_name,
+                        "depositAmount": str(payment.deposit_amount),
+                        "totalAmount": float(payment.rental_total_amount),
+                        "remainingAmount": float(payment.remaining_amount),
+                        "pickupDate": rental.start_date.strftime("%Y-%m-%d %H:%M"),
+                        "pickupLocation": rental.pickup_address,
+                        "nextStep": "Ready for pickup",
+                        "status": "confirmed"
+                    }
+                    
+                    renter_notification = Notification.objects.create(
+                        sender=rental.car.owner,
+                        receiver=rental.renter,
+                        title="✅ Deposit Payment Confirmed",
+                        message=f"Thank you for paying the deposit of {payment.deposit_amount} EGP for {car_name} using your saved card. Your rental is now confirmed and ready for pickup on {rental.start_date.strftime('%Y-%m-%d at %H:%M')}. Please contact the owner to arrange the handover.",
+                        notification_type="PAYMENT",
+                        priority="HIGH",
+                        data=renter_notification_data,
+                        navigation_id="RENTAL_CONFIRMED",
+                        is_read=False
+                    )
+                    print(f"✅ Self-drive deposit notifications created successfully: Owner={owner_notification.id}, Renter={renter_notification.id}")
                 except Exception as e:
                     print(f"❌ Error sending self-drive deposit notification: {str(e)}")
                     import traceback
@@ -716,6 +771,136 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         contract.owner_pickup_done_at = timezone.now()
         contract.save()
         SelfDriveRentalLog.objects.create(rental=rental, action='owner_pickup_handover', user=request.user, details='Owner did pickup handover with contract image and signature.')
+        
+        # إرسال إشعار للرينتر أن المالك أكمل الهاند أوفر
+        try:
+            from notifications.models import Notification
+            
+            # Get names
+            owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
+            car_name = f"{rental.car.brand} {rental.car.model}"
+            
+            # Detailed notification data for renter pickup handover
+            notification_data = {
+                "rentalId": rental.id,
+                "ownerId": rental.car.owner.id,
+                "carId": rental.car.id,
+                "status": rental.status,
+                "startDate": rental.start_date.isoformat(),
+                "endDate": rental.end_date.isoformat(),
+                "pickupAddress": rental.pickup_address,
+                "dropoffAddress": rental.dropoff_address,
+                "ownerName": owner_name,
+                "carName": car_name,
+                "carPlateNumber": rental.car.plate_number,
+                "carBrand": rental.car.brand,
+                "carModel": rental.car.model,
+                "carYear": rental.car.year,
+                "carColor": rental.car.color,
+                "carType": rental.car.car_type,
+                "carCategory": rental.car.car_category,
+                "carTransmission": rental.car.transmission_type,
+                "carFuelType": rental.car.fuel_type,
+                "carSeatingCapacity": rental.car.seating_capacity,
+                "carCurrentOdometer": rental.car.current_odometer_reading,
+                
+                # Payment details for renter pickup handover
+                "depositAmount": float(payment.deposit_amount),
+                "remainingAmount": float(payment.remaining_amount),
+                "totalAmount": float(payment.rental_total_amount),
+                "paymentMethod": payment.payment_method,
+                "depositPaidStatus": payment.deposit_paid_status,
+                "remainingPaidStatus": payment.remaining_paid_status,
+                
+                # Selected card info (if applicable)
+                "selectedCardInfo": {
+                    "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                    "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                    "cardId": rental.selected_card.id if rental.selected_card else None
+                } if rental.selected_card else None,
+                
+                # Trip details
+                "tripDuration": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                "rentalType": "self_drive",
+                
+                # Handover instructions for renter
+                "handoverInstructions": [
+                    "Verify owner identity",
+                    "Check car condition before pickup",
+                    "Take photos of car and odometer",
+                    "Sign contract if not signed",
+                    "Pay remaining amount" if payment.payment_method == 'cash' else "Payment will be processed automatically",
+                    "Start trip tracking"
+                ],
+                "nextAction": "renter_pickup_handover",
+                
+                # Renter pickup handover specific data
+                "handoverType": "cash_payment" if payment.payment_method == 'cash' else "automatic_payment",
+                "handoverMessage": f"Pay {float(payment.remaining_amount)} EGP in cash to owner" if payment.payment_method == 'cash' else "Payment will be processed automatically from your selected card",
+                "handoverStatus": "pending_cash_payment" if payment.payment_method == 'cash' else "automatic_payment_setup",
+                "handoverActions": [
+                    "Verify owner identity",
+                    "Inspect car condition",
+                    "Take car and odometer photos",
+                    "Pay cash amount" if payment.payment_method == 'cash' else "Confirm automatic payment",
+                    "Start trip"
+                ],
+                "handoverNotes": [
+                    f"Deposit paid: {float(payment.deposit_amount)} EGP",
+                    f"Remaining amount: {float(payment.remaining_amount)} EGP",
+                    f"Payment method: {payment.payment_method.upper()}",
+                    f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                    f"Pickup location: {rental.pickup_address}",
+                    f"Dropoff location: {rental.dropoff_address}",
+                    f"Car: {car_name} ({rental.car.plate_number})",
+                    f"Owner: {owner_name}"
+                ],
+                "event": "owner_pickup_completed"
+            }
+            
+            # Send notification to renter
+            Notification.objects.create(
+                receiver=rental.renter,
+                title="🚗 Ready to Start Your Trip!",
+                message=f"Hey {rental.renter.first_name}! The owner {owner_name} is ready to hand over your car {car_name} 🎯\n\n✅ You can now complete the handover and start your amazing trip!\n💡 Remember: Check the car condition and sign the contract before driving",
+                notification_type="RENTAL",
+                priority="HIGH",
+                data=notification_data,
+                navigation_id="REN_PICKUP_HND"
+            )
+            print(f"✅ Owner pickup completion notification sent to renter successfully")
+            
+            # Send notification to owner confirming handover completion
+            owner_notification_data = {
+                "rentalId": rental.id,
+                "renterId": rental.renter.id,
+                "carId": rental.car.id,
+                "status": rental.status,
+                "renterName": f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email,
+                "carName": car_name,
+                "handoverCompleted": True,
+                "handoverCompletedAt": contract.owner_pickup_done_at.isoformat(),
+                "nextStep": "wait_for_renter_handover",
+                "message": "تم تسليم السيارة بنجاح. انتظر المستأجر لإكمال الهاند أوفر.",
+                "event": "owner_pickup_completed"
+            }
+            
+            Notification.objects.create(
+                receiver=rental.car.owner,
+                title="✅ Car Handover Completed Successfully!",
+                message=f"Perfect! You've successfully handed over {car_name} to {rental.renter.first_name} 🎯\n\n⏰ Waiting for renter to complete final handover steps\n💡 Tip: Make sure to explain all car features and safety instructions",
+                notification_type="RENTAL",
+                priority="MEDIUM",
+                data=owner_notification_data,
+                navigation_id="OWN_PICKUP_COMPLETE"
+            )
+            print(f"✅ Owner pickup completion confirmation notification sent to owner successfully")
+            
+        except Exception as e:
+            print(f"❌ Error sending owner pickup completion notifications: {e}")
+            import traceback
+            traceback.print_exc()
+        
         return Response({
             'status': 'تم تسليم السيارة من المالك.',
             'owner_signed': contract.owner_signed,
@@ -803,30 +988,402 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         contract.renter_pickup_done_at = timezone.now()
         contract.save()
         SelfDriveRentalLog.objects.create(rental=rental, action='renter_pickup_handover', user=request.user, details='Renter did pickup handover with car image and odometer.')
+        
+        # بدء الرحلة تلقائياً بعد اكتمال الهاند أوفر
+        trip_started = False
+        trip_start_error = None
+        
+        try:
+            # نفس التشيكس الموجودة في start_trip
+            if not (contract.renter_pickup_done and contract.owner_pickup_done and contract.renter_signed and contract.owner_signed):
+                trip_start_error = 'يجب إتمام التسليم والتوقيع من الطرفين قبل بدء الرحلة.'
+            elif payment.deposit_paid_status != 'Paid':
+                trip_start_error = 'يجب دفع العربون قبل بدء الرحلة.'
+            elif payment.payment_method in ['visa', 'wallet'] and payment.remaining_paid_status != 'Paid':
+                trip_start_error = 'يجب دفع باقي المبلغ إلكترونياً قبل بدء الرحلة.'
+            elif payment.payment_method == 'cash' and payment.remaining_paid_status != 'Confirmed':
+                trip_start_error = 'يجب تأكيد استلام باقي المبلغ كاش قبل بدء الرحلة.'
+            elif rental.status == 'Ongoing':
+                trip_start_error = 'تم بدء الرحلة بالفعل.'
+            else:
+                # بدء الرحلة
+                old_status = rental.status
+                rental.status = 'Ongoing'
+                rental.save()
+                SelfDriveRentalLog.objects.create(rental=rental, action='trip_started', user=request.user, details='Trip started automatically after renter pickup handover.')
+                from .models import SelfDriveRentalStatusHistory
+                SelfDriveRentalStatusHistory.objects.create(rental=rental, old_status=old_status, new_status='Ongoing', changed_by=request.user)
+                trip_started = True
+                print(f"✅ Trip started automatically for rental #{rental.id}")
+                
+        except Exception as e:
+            trip_start_error = f'خطأ في بدء الرحلة: {str(e)}'
+            print(f"❌ Error starting trip automatically: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # إرسال إشعارات محدثة
+        try:
+            from notifications.models import Notification
+            
+            # Get names
+            renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
+            owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
+            car_name = f"{rental.car.brand} {rental.car.model}"
+            
+            # Detailed notification data for owner with complete car details
+            owner_notification_data = {
+                "rentalId": rental.id,
+                "renterId": rental.renter.id,
+                "carId": rental.car.id,
+                "status": rental.status,
+                "startDate": rental.start_date.isoformat(),
+                "endDate": rental.end_date.isoformat(),
+                "pickupAddress": rental.pickup_address,
+                "dropoffAddress": rental.dropoff_address,
+                "renterName": renter_name,
+                "carName": car_name,
+                
+                # Complete car details
+                "carDetails": {
+                    "plateNumber": rental.car.plate_number,
+                    "brand": rental.car.brand,
+                    "model": rental.car.model,
+                    "year": rental.car.year,
+                    "color": rental.car.color,
+                    "carType": rental.car.car_type,
+                    "carCategory": rental.car.car_category,
+                    "transmissionType": rental.car.transmission_type,
+                    "fuelType": rental.car.fuel_type,
+                    "seatingCapacity": rental.car.seating_capacity,
+                    "currentOdometer": rental.car.current_odometer_reading,
+                    "avgRating": float(rental.car.avg_rating),
+                    "totalReviews": rental.car.total_reviews,
+                    "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                    "images": self._get_car_images(rental.car, request)
+                },
+                
+                # Renter details
+                "renterDetails": {
+                    "name": renter_name,
+                                                "phone": rental.renter.phone_number,
+                    "email": rental.renter.email,
+                    "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                    "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                },
+                
+                # Payment details
+                "paymentDetails": {
+                    "depositAmount": float(payment.deposit_amount),
+                    "remainingAmount": float(payment.remaining_amount),
+                    "totalAmount": float(payment.rental_total_amount),
+                    "paymentMethod": payment.payment_method,
+                    "depositPaidStatus": payment.deposit_paid_status,
+                    "remainingPaidStatus": payment.remaining_paid_status,
+                    "remainingPaidAt": payment.remaining_paid_at.isoformat() if payment.remaining_paid_at else None,
+                    "remainingTransactionId": payment.remaining_transaction_id,
+                    "selectedCardInfo": {
+                        "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                        "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                        "cardId": rental.selected_card.id if rental.selected_card else None
+                    } if rental.selected_card else None
+                },
+                
+                # Trip details
+                "tripDetails": {
+                    "duration": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                    "rentalType": "self_drive",
+                    "tripStarted": trip_started,
+                    "tripStartError": trip_start_error
+                },
+                
+                # Handover details
+                "handoverDetails": {
+                    "ownerHandoverCompleted": contract.owner_pickup_done,
+                    "ownerHandoverTime": contract.owner_pickup_done_at.isoformat() if contract.owner_pickup_done_at else None,
+                    "renterHandoverCompleted": contract.renter_pickup_done,
+                    "renterHandoverTime": contract.renter_pickup_done_at.isoformat() if contract.renter_pickup_done_at else None,
+                    "contractSigned": contract.owner_signed and contract.renter_signed
+                }
+            }
+            
+            # Handover completion details
+            owner_notification_data.update({
+                "handoverCompleted": True,
+                "handoverCompletedAt": contract.renter_pickup_done_at.isoformat(),
+                "carImageUploaded": True,
+                "odometerImageUploaded": True,
+                "odometerValue": odometer_value,
+                
+                # Trip status
+                "tripStarted": trip_started,
+                "tripStartError": trip_start_error,
+                
+                # Next steps for owner
+                "nextAction": "trip_ongoing" if trip_started else "trip_start_failed",
+                "handoverMessage": f"Renter {renter_name} completed car pickup for {car_name}. Trip {'started successfully!' if trip_started else 'failed to start: ' + trip_start_error}",
+                "handoverStatus": "completed",
+                "handoverNotes": [
+                    f"Deposit paid: {float(payment.deposit_amount)} EGP",
+                    f"Remaining amount: {float(payment.remaining_amount)} EGP",
+                    f"Payment method: {payment.payment_method.upper()}",
+                    f"Payment status: {payment.remaining_paid_status}",
+                    f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                    f"Pickup location: {rental.pickup_address}",
+                    f"Dropoff location: {rental.dropoff_address}",
+                    f"Car: {car_name} ({rental.car.plate_number})",
+                    f"Renter: {renter_name}",
+                    f"Handover completed at: {contract.renter_pickup_done_at.strftime('%Y-%m-%d %H:%M')}",
+                    f"Trip status: {'Started' if trip_started else 'Failed to start'}"
+                ],
+                "event": "renter_pickup_completed"
+            })
+            
+            # Send notification to owner
+            if trip_started:
+                owner_title = "🚀 Trip Started Successfully!"
+                owner_message = f"Congratulations! Renter {renter_name} has completed car pickup for {car_name} and the trip has started successfully! 🎉\n\n📱 You can now track the trip in real-time\n💡 Tip: Make sure you have the renter's phone number for emergency contact\n\n🚗 Car Details:\n• {car_name} ({rental.car.plate_number})\n• {rental.car.year} • {rental.car.color} • {rental.car.transmission_type}\n• Daily Price: {float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0} EGP"
+            else:
+                owner_title = "⚠️ Renter Completed Pickup"
+                owner_message = f"Renter {renter_name} has completed car pickup for {car_name} ✅\n\n❌ But trip didn't start: {trip_start_error}\n💡 Tip: Check that all requirements are met\n\n🚗 Car Details:\n• {car_name} ({rental.car.plate_number})\n• {rental.car.year} • {rental.car.color} • {rental.car.transmission_type}"
+            
+            Notification.objects.create(
+                receiver=rental.car.owner,
+                title=owner_title,
+                message=owner_message,
+                notification_type="RENTAL",
+                priority="HIGH",
+                data=owner_notification_data,
+                navigation_id="OWN_ONGOING" if trip_started else "OWN_RENTER_COMPLETE"
+            )
+            print(f"✅ Renter pickup completion notification sent to owner successfully")
+            
+            # Send notification to renter confirming handover completion and trip start
+            renter_notification_data = {
+                "rentalId": rental.id,
+                "ownerId": rental.car.owner.id,
+                "carId": rental.car.id,
+                "status": rental.status,
+                "ownerName": owner_name,
+                "carName": car_name,
+                "handoverCompleted": True,
+                "handoverCompletedAt": contract.renter_pickup_done_at.isoformat(),
+                "paymentCompleted": payment.remaining_paid_status == 'Paid',
+                "tripStarted": trip_started,
+                "tripStartError": trip_start_error,
+                "nextStep": "trip_ongoing" if trip_started else "trip_start_failed",
+                "message": f"تم استلام السيارة بنجاح! الرحلة {'بدأت بنجاح!' if trip_started else 'لم تبدأ: ' + trip_start_error}",
+                "event": "renter_pickup_completed"
+            }
+            
+            if trip_started:
+                renter_title = "🎉 Trip Started Successfully!"
+                renter_message = f"Excellent! Car {car_name} has been successfully picked up and the trip has started! 🚗✨\n\n🎯 You can now enjoy your trip\n💡 Important tips:\n• Drive safely\n• Obey speed limits\n• Keep owner's phone number for emergencies\n• Make sure all doors are properly closed"
+            else:
+                renter_title = "✅ Car Pickup Completed"
+                renter_message = f"Car {car_name} has been successfully picked up! ✅\n\n❌ But trip didn't start: {trip_start_error}\n💡 Tip: Check that all requirements are met or contact technical support"
+            
+            Notification.objects.create(
+                receiver=rental.renter,
+                title=renter_title,
+                message=renter_message,
+                notification_type="RENTAL",
+                priority="MEDIUM",
+                data=renter_notification_data,
+                navigation_id="REN_ONGOING" if trip_started else "REN_PICKUP_COMPLETE"
+            )
+            print(f"✅ Renter pickup completion confirmation notification sent to renter successfully")
+            
+        except Exception as e:
+            print(f"❌ Error sending renter pickup completion notifications: {e}")
+            import traceback
+            traceback.print_exc()
+        
         return Response({
             'status': 'تم استلام السيارة من المستأجر.',
             'renter_signed': contract.renter_signed,
             'car_image': car_image.name,
             'odometer_image': odometer_image.name,
             'remaining_paid_status': payment.remaining_paid_status,
-            'paymob_details': paymob_details
+            'paymob_details': paymob_details,
+            'trip_started': trip_started,
+            'trip_start_error': trip_start_error
         })
+
+    def _send_location_notification(self, rental, user, location_type):
+        """Send location notifications to users"""
+        try:
+            from notifications.models import Notification
+            
+            if location_type == 'pickup':
+                title = "📍 Arrived at Pickup Location!"
+                message = f"Hello {user.first_name}! You've arrived at the car pickup location 🚗\n\n💡 Tip: Make sure the owner is present at the location before proceeding"
+                navigation_id = "REN_PICKUP_LOCATION"
+            elif location_type == 'dropoff':
+                title = "🏁 Arrived at Dropoff Location!"
+                message = f"Hello {user.first_name}! You've arrived at the car dropoff location 🎯\n\n💡 Tip: Make sure all doors are closed and engine is turned off"
+                navigation_id = "REN_DROPOFF_LOCATION"
+            
+            notification_data = {
+                "rentalId": rental.id,
+                "locationType": location_type,
+                "timestamp": timezone.now().isoformat(),
+                "event": f"{location_type}_location_reached"
+            }
+            
+            Notification.objects.create(  # type: ignore
+                receiver=user,
+                title=title,
+                message=message,
+                notification_type="LOCATION",
+                priority="MEDIUM",
+                data=notification_data,
+                navigation_id=navigation_id
+            )
+            print(f"✅ Location notification sent to {user.first_name} for {location_type}")
+            
+        except Exception as e:
+            print(f"❌ Error sending location notification: {e}")
+
+    def _send_emergency_notification(self, rental, emergency_type, details=""):
+        """Send emergency notifications"""
+        try:
+            from notifications.models import Notification
+            
+            emergency_messages = {
+                'late_return': {
+                    'title': "⚠️ Warning: Late Return",
+                    'message': f"Warning! The trip has exceeded the scheduled return time ⏰\n\n💡 Tip: Contact the owner immediately to clarify the situation"
+                },
+                'payment_issue': {
+                    'title': "💳 Payment Issue",
+                    'message': f"A problem occurred while processing the payment 💳\n\n💡 Tip: Check your card details or contact technical support"
+                },
+                'car_issue': {
+                    'title': "🚗 Car Issue",
+                    'message': f"A car issue has been reported 🚗\n\n💡 Tip: Don't try to fix the problem yourself, contact the owner immediately"
+                }
+            }
+            
+            emergency_info = emergency_messages.get(emergency_type, {
+                'title': "⚠️ Important Alert",
+                'message': f"A problem occurred during the trip: {details}\n\n💡 Tip: Contact technical support immediately"
+            })
+            
+            notification_data = {
+                "rentalId": rental.id,
+                "emergencyType": emergency_type,
+                "details": details,
+                "timestamp": timezone.now().isoformat(),
+                "event": "emergency_alert"
+            }
+            
+            # إرسال للمالك والمستأجر
+            for user in [rental.car.owner, rental.renter]:
+                Notification.objects.create(  # type: ignore
+                    receiver=user,
+                    title=emergency_info['title'],
+                    message=emergency_info['message'],
+                    notification_type="EMERGENCY",
+                    priority="HIGH",
+                    data=notification_data,
+                    navigation_id="EMERGENCY_ALERT"
+                )
+            
+            print(f"✅ Emergency notification sent for {emergency_type}")
+            
+        except Exception as e:
+            print(f"❌ Error sending emergency notification: {e}")
+
+    def _get_car_images(self, car, request):
+        """Get car images from documents"""
+        try:
+            from documents.models import Document
+            car_images = []
+            car_documents = Document.objects.filter(car=car)  # type: ignore
+            
+            for doc in car_documents:
+                if hasattr(doc, 'file') and doc.file and doc.file.name:
+                    try:
+                        if doc.file.storage.exists(doc.file.name) and not doc.file.name.endswith('/'):
+                            if doc.file.url and not doc.file.url.endswith('/'):
+                                image_url = request.build_absolute_uri(doc.file.url) if request else doc.file.url
+                                car_images.append({
+                                    'id': doc.id,
+                                    'url': image_url,
+                                    'type': doc.document_type.name if doc.document_type else 'Unknown',
+                                    'filename': doc.file.name
+                                })
+                    except Exception as img_error:
+                        print(f"Error processing image {doc.id}: {str(img_error)}")
+                        continue
+            return car_images
+        except Exception as e:
+            print(f"Error getting car images: {str(e)}")
+            return []
+
+    def _send_trip_progress_notification(self, rental, progress_type):
+        """Send trip progress notifications"""
+        try:
+            from notifications.models import Notification
+            
+            progress_messages = {
+                'halfway': {
+                    'title': "⏰ Halfway Through Trip",
+                    'message': f"Hello {rental.renter.first_name}! You've reached the halfway point of your trip 🎯\n\n💡 Tip: Make sure everything is going well"
+                },
+                'near_end': {
+                    'title': "🏁 Trip Ending Soon",
+                    'message': f"Hello {rental.renter.first_name}! You're approaching the end of your trip ⏰\n\n💡 Tip: Start heading to the dropoff location"
+                },
+                'successful_trip': {
+                    'title': "🎉 Successful Trip!",
+                    'message': f"Congratulations {rental.renter.first_name}! You've completed your trip successfully 🎯\n\n💡 Tip: Don't forget to rate your experience to improve our service"
+                }
+            }
+            
+            progress_info = progress_messages.get(progress_type, {
+                'title': "📊 Trip Update",
+                'message': f"Update on your trip: {progress_type}"
+            })
+            
+            notification_data = {
+                "rentalId": rental.id,
+                "progressType": progress_type,
+                "timestamp": timezone.now().isoformat(),
+                "event": "trip_progress"
+            }
+            
+            Notification.objects.create(  # type: ignore
+                receiver=rental.renter,
+                title=progress_info['title'],
+                message=progress_info['message'],
+                notification_type="PROGRESS",
+                priority="MEDIUM",
+                data=notification_data,
+                navigation_id="TRIP_PROGRESS"
+            )
+            
+            print(f"✅ Trip progress notification sent for {progress_type}")
+            
+        except Exception as e:
+            print(f"❌ Error sending trip progress notification: {e}")
 
     @action(detail=True, methods=['post'])
     def renter_return_handover(self, request, pk=None):
         rental = self.get_object()
         contract = rental.contract
         if contract.renter_return_done:
-            return Response({'error_code': 'RENTER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'تم تنفيذ تسليم المستأجر (نهاية الرحلة) بالفعل ولا يمكن تكراره.'}, status=400)
+            return Response({'error_code': 'RENTER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'Renter return handover has already been completed and cannot be repeated.'}, status=400)
         payment = rental.payment
         odometer_image = request.FILES.get('odometer_image')
         odometer_value = request.data.get('odometer_value')
         car_image = request.FILES.get('car_image')
         notes = request.data.get('notes', '')
         if not odometer_image or not odometer_value:
-            return Response({'error_code': 'ODOMETER_END_REQUIRED', 'error_message': 'صورة وقراءة عداد النهاية مطلوبة.'}, status=400)
+            return Response({'error_code': 'ODOMETER_END_REQUIRED', 'error_message': 'End odometer image and reading are required.'}, status=400)
         if not car_image:
-            return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'صورة العربية مطلوبة.'}, status=400)
+            return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'Car image is required.'}, status=400)
         SelfDriveOdometerImage.objects.create(rental=rental, image=odometer_image, value=odometer_value, type='end')
         from .models import SelfDriveCarImage
         SelfDriveCarImage.objects.create(rental=rental, image=car_image, type='return', uploaded_by='renter', notes=notes)
@@ -840,11 +1397,11 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
     def owner_return_handover(self, request, pk=None):
         rental = self.get_object()
         contract = rental.contract
-        # لا يمكن تنفيذ هاند أوفر المالك إلا بعد هاند أوفر المستأجر
+        # Owner handover can only be done after renter handover
         if not contract.renter_return_done:
-            return Response({'error_code': 'RENTER_HANDOVER_REQUIRED', 'error_message': 'يجب أن يقوم المستأجر بتسليم السيارة أولاً.'}, status=400)
+            return Response({'error_code': 'RENTER_HANDOVER_REQUIRED', 'error_message': 'Renter must return the car first.'}, status=400)
         if contract.owner_return_done:
-            return Response({'error_code': 'OWNER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'تم تنفيذ تسليم المالك (نهاية الرحلة) بالفعل ولا يمكن تكراره.'}, status=400)
+            return Response({'error_code': 'OWNER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'Owner return handover has already been completed and cannot be repeated.'}, status=400)
         notes = request.data.get('notes', '')
         payment = rental.payment
         # --- لا تغير أي شيء في الكونتراكت هنا ---
@@ -1737,7 +2294,8 @@ class NewCardDepositPaymentView(APIView):
             import uuid
             reference = str(uuid.uuid4())
             user_id = str(user.id)
-            merchant_order_id_with_user = f"{reference}_{user_id}"
+            # Use the new format that includes rental_id and rental_type for better tracking
+            merchant_order_id_with_user = f"selfdrive_deposit_{rental_id}_{reference}_{user_id}"
             order_id = paymob.create_order(auth_token, amount_cents, merchant_order_id_with_user)
             integration_id = settings.PAYMOB_INTEGRATION_ID_CARD
             billing_data = {
@@ -2616,9 +3174,9 @@ class RentalPreviewView(APIView):
             # Get car and validate
             from cars.models import Car
             try:
-                car = Car.objects.get(id=car_id)
-            except Car.DoesNotExist:
-                return Response({'error': 'Car not found'}, status=404)
+                car = Car.objects.get(id=car_id)  # type: ignore
+            except Car.DoesNotExist:  # type: ignore
+                return Response({'error': 'Car not found'}, status=404)  # type: ignore
             
             # Check if car is available
             # if not car.approval_status:
@@ -2665,7 +3223,7 @@ class RentalPreviewView(APIView):
             from documents.models import Document
             car_images = []
             try:
-                car_documents = Document.objects.filter(car=car)
+                car_documents = Document.objects.filter(car=car)  # type: ignore
                 print(f"Found {car_documents.count()} documents for car {car.id}")
                 for doc in car_documents:
                     print(f"Document {doc.id}: file={doc.file}, name={doc.file.name if doc.file else 'None'}")

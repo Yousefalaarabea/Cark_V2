@@ -115,6 +115,8 @@ class RentalCreateUpdateSerializer(serializers.ModelSerializer):
         if not data.get('stops') or len(data.get('stops')) == 0:
             raise serializers.ValidationError('At least one stop is required.')
         
+
+        
         # تحقق من selected_card_id validation
         selected_card_id = data.get('selected_card_id')
         payment_method = data.get('payment_method')

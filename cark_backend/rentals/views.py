@@ -683,6 +683,34 @@ class RentalViewSet(viewsets.ModelViewSet):
                     "cardLast4": card.card_last_four_digits if hasattr(card, 'card_last_four_digits') else "****",
                     "cardBrand": card.card_brand if hasattr(card, 'card_brand') else "Card",
                     
+                    # Complete car details
+                    "carDetails": {
+                        "plateNumber": rental.car.plate_number,
+                        "brand": rental.car.brand,
+                        "model": rental.car.model,
+                        "year": rental.car.year,
+                        "color": rental.car.color,
+                        "carType": rental.car.car_type,
+                        "carCategory": rental.car.car_category,
+                        "transmissionType": rental.car.transmission_type,
+                        "fuelType": rental.car.fuel_type,
+                        "seatingCapacity": rental.car.seating_capacity,
+                        "currentOdometer": rental.car.current_odometer_reading,
+                        "avgRating": float(rental.car.avg_rating),
+                        "totalReviews": rental.car.total_reviews,
+                        "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                        "images": self._get_car_images(rental.car, request)
+                    },
+                    
+                    # Renter details
+                    "renterDetails": {
+                        "name": renter_name,
+                        "phone": rental.renter.phone,
+                        "email": rental.renter.email,
+                        "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                        "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                    },
+                    
                     # Payment details for owner pickup handover
                     "remainingAmount": float(rental.breakdown.remaining_amount) if hasattr(rental, 'breakdown') else 0,
                     "totalAmount": float(rental.breakdown.total_amount) if hasattr(rental, 'breakdown') else 0,
@@ -2227,6 +2255,33 @@ class RentalViewSet(viewsets.ModelViewSet):
                 'Statistics updated for both users'
             ]
         })
+
+    def _get_car_images(self, car, request):
+        """Get car images from documents"""
+        try:
+            from documents.models import Document
+            car_images = []
+            car_documents = Document.objects.filter(car=car)
+            
+            for doc in car_documents:
+                if hasattr(doc, 'file') and doc.file and doc.file.name:
+                    try:
+                        if doc.file.storage.exists(doc.file.name) and not doc.file.name.endswith('/'):
+                            if doc.file.url and not doc.file.url.endswith('/'):
+                                image_url = request.build_absolute_uri(doc.file.url) if request else doc.file.url
+                                car_images.append({
+                                    'id': doc.id,
+                                    'url': image_url,
+                                    'type': doc.document_type.name if doc.document_type else 'Unknown',
+                                    'filename': doc.file.name
+                                })
+                    except Exception as img_error:
+                        print(f"Error processing image {doc.id}: {str(img_error)}")
+                        continue
+            return car_images
+        except Exception as e:
+            print(f"Error getting car images: {str(e)}")
+            return []
 
     def _get_next_stop_info(self, rental_id, current_stop_order):
         """دالة مساعدة للحصول على معلومات المحطة التالية"""

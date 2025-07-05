@@ -52,7 +52,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "salt-claire-trek-book.trycloudflare.com",
-    
+    "*",  # Allow all hosts for development (remove in production)
 ]
 
 
