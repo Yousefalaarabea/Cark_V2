@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from .models import Notification
 from .serializers import NotificationSerializer, NotificationCreateSerializer
+from .services import NotificationService
 
 User = get_user_model()
 
@@ -165,3 +166,47 @@ class NotificationViewSet(viewsets.ModelViewSet):
             'status': f'deleted {count} read notifications',
             'count': count
         })
+    
+    @action(detail=False, methods=['post'])
+    def test_booking_notification(self, request):
+        """Test endpoint to create a sample booking notification"""
+        try:
+            # Get the current user
+            user = request.user
+            
+            # Create a test notification
+            notification = Notification.objects.create( # type: ignore
+                sender=user,
+                receiver=user,  # Send to self for testing
+                title="Test Booking Request",
+                message="This is a test booking request notification",
+                notification_type="RENTAL",
+                priority="HIGH",
+                data={
+                    "renterId": user.id,
+                    "carId": 1,
+                    "status": "PendingOwnerConfirmation",
+                    "rentalId": 1,
+                    "startDate": "2024-01-01T10:00:00Z",
+                    "endDate": "2024-01-03T10:00:00Z",
+                    "pickupAddress": "Cairo, Egypt",
+                    "dropoffAddress": "Alexandria, Egypt",
+                    "renterName": f"{user.first_name} {user.last_name}",
+                    "carName": "Toyota Camry",
+                    "dailyPrice": 200.0,
+                    "totalDays": 3,
+                    "totalAmount": 600.0,
+                    "depositAmount": 90.0,
+                },
+                is_read=False
+            )
+            
+            return Response({
+                'status': 'Test notification created successfully',
+                'notification': NotificationSerializer(notification).data
+            })
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=500)

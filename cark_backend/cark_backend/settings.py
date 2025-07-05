@@ -50,9 +50,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "localhost",
-    "start-heading-ships-translations.trycloudflare.com",
     "127.0.0.1",
-    "structure-blvd-klein-digit.trycloudflare.com",
+    "salt-claire-trek-book.trycloudflare.com",
     
 ]
 

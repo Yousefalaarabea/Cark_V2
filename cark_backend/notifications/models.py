@@ -31,6 +31,7 @@ class Notification(models.Model):
     notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='OTHER')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='NORMAL')
     data = models.JSONField(default=dict, blank=True)  # type: ignore
+    navigation_id = models.CharField(max_length=20, null=True, blank=True, help_text="Navigation identifier for the frontend")
     is_read = models.BooleanField(default=False)  # type: ignore
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

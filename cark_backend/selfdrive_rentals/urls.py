@@ -1,3 +1,11 @@
+from django.urls import path
+from .views import RentalPreviewView
+
+urlpatterns = [
+    # Rental preview endpoint (يجب أن يكون أول واحد)
+    path('selfdrive-rentals/preview/', RentalPreviewView.as_view(), name='rental-preview'),
+]
+
 from rest_framework.routers import DefaultRouter
 from .views import (
     SelfDriveRentalViewSet, NewCardDepositPaymentView, PriceCalculatorView,
@@ -9,10 +17,9 @@ from .views import (
 router = DefaultRouter()
 router.register(r'selfdrive-rentals', SelfDriveRentalViewSet, basename='selfdrive-rental')
 
-urlpatterns = router.urls
+urlpatterns += router.urls
 
 # Additional endpoints
-from django.urls import path
 urlpatterns += [
     # Payment endpoints
     path('selfdrive-rentals/<int:rental_id>/new_card_deposit_payment/', NewCardDepositPaymentView.as_view()),

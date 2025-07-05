@@ -364,6 +364,173 @@ def paymob_webhook(request):
                     payment_obj.rental.status = 'Confirmed'
                     payment_obj.rental.save()
                     print(f"✅ SelfDrivePayment updated for deposit: {payment_obj.id}")
+                    
+                    # Send notifications for self-drive deposit payment
+                    try:
+                        from notifications.models import Notification
+                        
+                        rental = payment_obj.rental
+                        renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
+                        car_name = f"{rental.car.brand} {rental.car.model}"
+                        owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
+                        
+                        # Notification data for owner pickup handover (self-drive)
+                        notification_data = {
+                            "rentalId": rental.id,
+                            "renterId": rental.renter.id,
+                            "carId": rental.car.id,
+                            "status": rental.status,
+                            "startDate": rental.start_date.isoformat(),
+                            "endDate": rental.end_date.isoformat(),
+                            "pickupAddress": rental.pickup_address,
+                            "dropoffAddress": rental.dropoff_address,
+                            "renterName": renter_name,
+                            "carName": car_name,
+                            "depositAmount": float(payment_obj.deposit_amount),
+                            "transactionId": transaction_id,
+                            "paymentMethod": "new_card",
+                            "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
+                            "cardBrand": source_data.get("type", "Card").title(),
+                            
+                            # Payment details for owner pickup handover
+                            "remainingAmount": float(payment_obj.remaining_amount),
+                            "totalAmount": float(payment_obj.rental_total_amount),
+                            "rentalPaymentMethod": rental.payment_method,
+                            "cashCollectionRequired": rental.payment_method == 'cash',
+                            "cashAmountToCollect": float(payment_obj.remaining_amount) if rental.payment_method == 'cash' else 0,
+                            "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                            "selectedCardInfo": {
+                                "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                                "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                                "cardId": rental.selected_card.id if rental.selected_card else None
+                            } if rental.selected_card else None,
+                            
+                            # Trip details
+                            "plannedKm": float(rental.planned_km) if hasattr(rental, 'planned_km') else 0,
+                            "dailyPrice": float(rental.daily_price) if hasattr(rental, 'daily_price') else 0,
+                            "totalDays": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                            "rentalType": "self_drive",
+                            
+                            # Owner earnings info
+                            "ownerEarnings": float(payment_obj.owner_earnings) if hasattr(payment_obj, 'owner_earnings') else 0,
+                            "platformFee": float(payment_obj.platform_fee) if hasattr(payment_obj, 'platform_fee') else 0,
+                            "commissionRate": 0.2,  # Default commission rate
+                            
+                            # Handover instructions
+                            "handoverInstructions": [
+                                "Verify renter identity",
+                                "Check car condition before handover",
+                                "Confirm pickup location",
+                                "Collect cash payment" if rental.payment_method == 'cash' else "Payment will be processed automatically",
+                                "Start trip tracking"
+                            ],
+                            "nextAction": "owner_pickup_handover",
+                            
+                            # Owner pickup handover specific data
+                            "handoverType": "cash_collection" if rental.payment_method == 'cash' else "automatic_payment",
+                            "handoverMessage": f"Collect {float(payment_obj.remaining_amount)} EGP in cash from renter" if rental.payment_method == 'cash' else "No cash collection needed - payment will be processed automatically",
+                            "handoverStatus": "pending_cash_collection" if rental.payment_method == 'cash' else "automatic_payment_setup",
+                            "handoverActions": [
+                                "Confirm renter identity",
+                                "Inspect car condition",
+                                "Collect cash payment" if rental.payment_method == 'cash' else "Verify automatic payment setup",
+                                "Start trip"
+                            ],
+                            "handoverNotes": [
+                                f"Deposit paid: {float(payment_obj.deposit_amount)} EGP",
+                                f"Remaining amount: {float(payment_obj.remaining_amount)} EGP",
+                                f"Payment method: {rental.payment_method.upper()}",
+                                f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                                f"Pickup location: {rental.pickup_address}",
+                                f"Dropoff location: {rental.dropoff_address}"
+                            ],
+                            "handoverWarnings": [
+                                "Ensure you have proper change for cash payment" if rental.payment_method == 'cash' else "Payment will be charged automatically at trip end",
+                                "Verify renter's driving license",
+                                "Check car fuel level before handover",
+                                "Document any existing damage"
+                            ],
+                            "handoverChecklist": [
+                                "✅ Renter ID verification",
+                                "✅ Driving license check",
+                                "✅ Car condition inspection",
+                                "✅ Fuel level confirmation",
+                                "✅ Damage documentation",
+                                "✅ Cash collection" if rental.payment_method == 'cash' else "✅ Payment method verification",
+                                "✅ Trip start confirmation"
+                            ],
+                            "handoverSummary": {
+                                "totalEarnings": float(payment_obj.owner_earnings) if hasattr(payment_obj, 'owner_earnings') else 0,
+                                "platformCommission": float(payment_obj.platform_fee) if hasattr(payment_obj, 'platform_fee') else 0,
+                                "commissionPercentage": 20.0,
+                                "cashToCollect": float(payment_obj.remaining_amount) if rental.payment_method == 'cash' else 0,
+                                "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                                "tripDuration": f"{(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                                "pickupTime": rental.start_date.strftime("%Y-%m-%d %H:%M"),
+                                "dropoffTime": rental.end_date.strftime("%Y-%m-%d %H:%M")
+                            }
+                        }
+                        
+                        # Notification for owner (self-drive)
+                        try:
+                            Notification.objects.create(
+                                sender=rental.renter,
+                                receiver=rental.car.owner,
+                                title="Deposit Payment Received",
+                                message=f"{renter_name} has paid the deposit of {payment_obj.deposit_amount} EGP for {car_name} using new card",
+                                notification_type="PAYMENT",
+                                priority="HIGH",
+                                data=notification_data,
+                                navigation_id="DEP_OWNER",
+                                is_read=False
+                            )
+                            print(f"✅ Self-drive owner notification created successfully in webhook")
+                        except Exception as e:
+                            print(f"❌ Error creating self-drive owner notification in webhook: {e}")
+                            import traceback
+                            traceback.print_exc()
+                        
+                        # Notification for renter (confirmation) - self-drive
+                        renter_notification_data = {
+                            "rentalId": rental.id,
+                            "carId": rental.car.id,
+                            "status": rental.status,
+                            "startDate": rental.start_date.isoformat(),
+                            "endDate": rental.end_date.isoformat(),
+                            "pickupAddress": rental.pickup_address,
+                            "dropoffAddress": rental.dropoff_address,
+                            "carName": car_name,
+                            "ownerName": owner_name,
+                            "depositAmount": float(payment_obj.deposit_amount),
+                            "transactionId": transaction_id,
+                            "paymentMethod": "new_card",
+                            "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
+                            "cardBrand": source_data.get("type", "Card").title(),
+                        }
+                        
+                        try:
+                            Notification.objects.create(
+                                sender=rental.car.owner,
+                                receiver=rental.renter,
+                                title="Deposit Payment Confirmed",
+                                message=f"Your deposit payment of {payment_obj.deposit_amount} EGP for {car_name} has been confirmed",
+                                notification_type="PAYMENT",
+                                priority="HIGH",
+                                data=renter_notification_data,
+                                navigation_id="REN_ONT_TRP",
+                                is_read=False
+                            )
+                            print(f"✅ Self-drive renter notification created successfully in webhook")
+                        except Exception as e:
+                            print(f"❌ Error creating self-drive renter notification in webhook: {e}")
+                            import traceback
+                            traceback.print_exc()
+                        
+                        print(f"✅ Self-drive notifications sent for rental {rental.id} deposit payment")
+                    except Exception as e:
+                        print(f"❌ Error sending self-drive notifications: {e}")
+                        import traceback
+                        traceback.print_exc()
         except Exception as e:
             print(f"❌ Error updating SelfDrivePayment in webhook: {e}")
             
@@ -405,6 +572,171 @@ def paymob_webhook(request):
                             payment_obj.rental.status = 'Confirmed'
                             payment_obj.rental.save()
                             print(f"✅ RentalPayment updated for deposit: {payment_obj.id}, rental: {rental_id}")
+                            
+                            # Send notifications for new card deposit payment
+                            try:
+                                from notifications.models import Notification
+                                
+                                rental = payment_obj.rental
+                                renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
+                                car_name = f"{rental.car.brand} {rental.car.model}"
+                                owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
+                                
+                                # Notification data for owner pickup handover
+                                notification_data = {
+                                    "rentalId": rental.id,
+                                    "renterId": rental.renter.id,
+                                    "carId": rental.car.id,
+                                    "status": rental.status,
+                                    "startDate": rental.start_date.isoformat(),
+                                    "endDate": rental.end_date.isoformat(),
+                                    "pickupAddress": rental.pickup_address,
+                                    "dropoffAddress": rental.dropoff_address,
+                                    "renterName": renter_name,
+                                    "carName": car_name,
+                                    "depositAmount": float(payment_obj.deposit_amount),
+                                    "transactionId": transaction_id,
+                                    "paymentMethod": "new_card",
+                                    "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
+                                    "cardBrand": source_data.get("type", "Card").title(),
+                                    
+                                    # Payment details for owner pickup handover
+                                    "remainingAmount": float(rental.breakdown.remaining_amount) if hasattr(rental, 'breakdown') else 0,
+                                    "totalAmount": float(rental.breakdown.total_amount) if hasattr(rental, 'breakdown') else 0,
+                                    "rentalPaymentMethod": rental.payment_method,
+                                    "cashCollectionRequired": rental.payment_method == 'cash',
+                                    "cashAmountToCollect": float(rental.breakdown.remaining_amount) if (hasattr(rental, 'breakdown') and rental.payment_method == 'cash') else 0,
+                                    "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                                    "selectedCardInfo": {
+                                        "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                                        "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                                        "cardId": rental.selected_card.id if rental.selected_card else None
+                                    } if rental.selected_card else None,
+                                    
+                                    # Trip details
+                                    "plannedKm": float(rental.breakdown.planned_km) if hasattr(rental, 'breakdown') else 0,
+                                    "dailyPrice": float(rental.breakdown.daily_price) if hasattr(rental, 'breakdown') else 0,
+                                    "totalDays": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                                    "rentalType": rental.rental_type,
+                                    
+                                    # Owner earnings info
+                                    "ownerEarnings": float(rental.breakdown.driver_earnings) if hasattr(rental, 'breakdown') else 0,
+                                    "platformFee": float(rental.breakdown.platform_fee) if hasattr(rental, 'breakdown') else 0,
+                                    "commissionRate": float(rental.breakdown.commission_rate) if hasattr(rental, 'breakdown') else 0.2,
+                                    
+                                    # Handover instructions
+                                    "handoverInstructions": [
+                                        "Verify renter identity",
+                                        "Check car condition before handover",
+                                        "Confirm pickup location",
+                                        "Collect cash payment" if rental.payment_method == 'cash' else "Payment will be processed automatically",
+                                        "Start trip tracking"
+                                    ],
+                                    "nextAction": "owner_confirm_arrival" if not rental.owner_arrival_confirmed else "start_trip",
+                                    
+                                    # Owner pickup handover specific data
+                                    "handoverType": "cash_collection" if rental.payment_method == 'cash' else "automatic_payment",
+                                    "handoverMessage": f"Collect {float(rental.breakdown.remaining_amount) if hasattr(rental, 'breakdown') else 0} EGP in cash from renter" if rental.payment_method == 'cash' else "No cash collection needed - payment will be processed automatically",
+                                    "handoverStatus": "pending_cash_collection" if rental.payment_method == 'cash' else "automatic_payment_setup",
+                                    "handoverActions": [
+                                        "Confirm renter identity",
+                                        "Inspect car condition",
+                                        "Collect cash payment" if rental.payment_method == 'cash' else "Verify automatic payment setup",
+                                        "Start trip"
+                                    ],
+                                    "handoverNotes": [
+                                        f"Deposit paid: {float(payment_obj.deposit_amount)} EGP",
+                                        f"Remaining amount: {float(rental.breakdown.remaining_amount) if hasattr(rental, 'breakdown') else 0} EGP",
+                                        f"Payment method: {rental.payment_method.upper()}",
+                                        f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                                        f"Pickup location: {rental.pickup_address}",
+                                        f"Dropoff location: {rental.dropoff_address}"
+                                    ],
+                                    "handoverWarnings": [
+                                        "Ensure you have proper change for cash payment" if rental.payment_method == 'cash' else "Payment will be charged automatically at trip end",
+                                        "Verify renter's driving license",
+                                        "Check car fuel level before handover",
+                                        "Document any existing damage"
+                                    ],
+                                    "handoverChecklist": [
+                                        "✅ Renter ID verification",
+                                        "✅ Driving license check",
+                                        "✅ Car condition inspection",
+                                        "✅ Fuel level confirmation",
+                                        "✅ Damage documentation",
+                                        "✅ Cash collection" if rental.payment_method == 'cash' else "✅ Payment method verification",
+                                        "✅ Trip start confirmation"
+                                    ],
+                                    "handoverSummary": {
+                                        "totalEarnings": float(rental.breakdown.driver_earnings) if hasattr(rental, 'breakdown') else 0,
+                                        "platformCommission": float(rental.breakdown.platform_fee) if hasattr(rental, 'breakdown') else 0,
+                                        "commissionPercentage": float(rental.breakdown.commission_rate * 100) if hasattr(rental, 'breakdown') else 20,
+                                        "cashToCollect": float(rental.breakdown.remaining_amount) if (hasattr(rental, 'breakdown') and rental.payment_method == 'cash') else 0,
+                                        "automaticPayment": rental.payment_method in ['visa', 'wallet'],
+                                        "tripDuration": f"{(rental.end_date.date() - rental.start_date.date()).days + 1} days",
+                                        "pickupTime": rental.start_date.strftime("%Y-%m-%d %H:%M"),
+                                        "dropoffTime": rental.end_date.strftime("%Y-%m-%d %H:%M")
+                                    }
+                                }
+                                
+                                # Notification for owner
+                                try:
+                                    Notification.objects.create(
+                                        sender=rental.renter,
+                                        receiver=rental.car.owner,
+                                        title="Deposit Payment Received",
+                                        message=f"{renter_name} has paid the deposit of {payment_obj.deposit_amount} EGP for {car_name} using new card",
+                                        notification_type="PAYMENT",
+                                        priority="HIGH",
+                                        data=notification_data,
+                                        navigation_id="DEP_OWNER",
+                                        is_read=False
+                                    )
+                                    print(f"✅ Owner notification created successfully in webhook")
+                                except Exception as e:
+                                    print(f"❌ Error creating owner notification in webhook: {e}")
+                                    import traceback
+                                    traceback.print_exc()
+                                
+                                # Notification for renter (confirmation)
+                                renter_notification_data = {
+                                    "rentalId": rental.id,
+                                    "carId": rental.car.id,
+                                    "status": rental.status,
+                                    "startDate": rental.start_date.isoformat(),
+                                    "endDate": rental.end_date.isoformat(),
+                                    "pickupAddress": rental.pickup_address,
+                                    "dropoffAddress": rental.dropoff_address,
+                                    "carName": car_name,
+                                    "ownerName": owner_name,
+                                    "depositAmount": float(payment_obj.deposit_amount),
+                                    "transactionId": transaction_id,
+                                    "paymentMethod": "new_card",
+                                    "cardLast4": source_data.get("pan", "****")[-4:] if source_data.get("pan") else "****",
+                                    "cardBrand": source_data.get("type", "Card").title(),
+                                }
+                                
+                                try:
+                                    Notification.objects.create(
+                                        sender=rental.car.owner,
+                                        receiver=rental.renter,
+                                        title="Deposit Payment Confirmed",
+                                        message=f"Your deposit payment of {payment_obj.deposit_amount} EGP for {car_name} has been confirmed",
+                                        notification_type="PAYMENT",
+                                        priority="HIGH",
+                                        data=renter_notification_data,
+                                        navigation_id="REN_ONT_TRP",
+                                        is_read=False
+                                    )
+                                    print(f"✅ Renter notification created successfully in webhook")
+                                except Exception as e:
+                                    print(f"❌ Error creating renter notification in webhook: {e}")
+                                    import traceback
+                                    traceback.print_exc()
+                                
+                                print(f"✅ Notifications sent for rental {rental.id} deposit payment")
+                            except Exception as e:
+                                print(f"❌ Error sending notifications: {e}")
                         else:
                             payment_obj.deposit_paid_status = 'Failed'
                             payment_obj.save()
