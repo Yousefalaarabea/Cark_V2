@@ -426,6 +426,9 @@ class RentalViewSet(viewsets.ModelViewSet):
         owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
         car_name = f"{rental.car.brand} {rental.car.model}"
         
+        # Get car images from documents
+        car_images = self._get_car_images(rental.car, request)
+        
         # Detailed notification data for renter pickup handover
         notification_data = {
             "rentalId": rental.id,
@@ -439,6 +442,25 @@ class RentalViewSet(viewsets.ModelViewSet):
             "renterName": renter_name,
             "ownerName": owner_name,
             "carName": car_name,
+            
+            # Car details with images
+            "carDetails": {
+                "plateNumber": rental.car.plate_number,
+                "brand": rental.car.brand,
+                "model": rental.car.model,
+                "year": rental.car.year,
+                "color": rental.car.color,
+                "carType": rental.car.car_type,
+                "carCategory": rental.car.car_category,
+                "transmissionType": rental.car.transmission_type,
+                "fuelType": rental.car.fuel_type,
+                "seatingCapacity": rental.car.seating_capacity,
+                "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                "avgRating": float(rental.car.avg_rating),
+                "totalReviews": rental.car.total_reviews,
+                "dailyPrice": float(rental.breakdown.daily_price) if hasattr(rental, 'breakdown') else 0,
+                "images": car_images
+            },
             
             # Payment details for pickup handover
             "depositAmount": float(payment.deposit_amount) if payment else 0,
@@ -478,6 +500,22 @@ class RentalViewSet(viewsets.ModelViewSet):
         }
         
         try:
+            from decimal import Decimal
+            
+            # دالة مساعدة لتحويل Decimal إلى float
+            def convert_decimal_to_float(obj):
+                if isinstance(obj, dict):
+                    return {key: convert_decimal_to_float(value) for key, value in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_decimal_to_float(item) for item in obj]
+                elif isinstance(obj, Decimal):
+                    return float(obj)
+                else:
+                    return obj
+            
+            # تحويل جميع قيم Decimal إلى float
+            notification_data = convert_decimal_to_float(notification_data)
+            
             Notification.objects.create(
                 receiver=rental.renter,
                 title="السائق وصل",
@@ -539,6 +577,19 @@ class RentalViewSet(viewsets.ModelViewSet):
         دفع العربون بكارت محفوظ (نفس نظام self-drive)
         صفحة منفصلة بطرق دفع منفصلة
         """
+        from decimal import Decimal
+        
+        # دالة مساعدة لتحويل Decimal إلى float
+        def convert_decimal_to_float(obj):
+            if isinstance(obj, dict):
+                return {key: convert_decimal_to_float(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_decimal_to_float(item) for item in obj]
+            elif isinstance(obj, Decimal):
+                return float(obj)
+            else:
+                return obj
+        
         rental = self.get_object()
         
         # ===== BASIC VALIDATIONS (same as self-drive) =====
@@ -792,6 +843,9 @@ class RentalViewSet(viewsets.ModelViewSet):
                 
                 # Create notification for owner
                 try:
+                    # تحويل جميع قيم Decimal إلى float
+                    notification_data = convert_decimal_to_float(notification_data)
+                    
                     notification = Notification.objects.create(
                         sender=rental.renter,  # Renter is the sender
                         receiver=rental.car.owner,    # Car owner is the receiver
@@ -828,6 +882,9 @@ class RentalViewSet(viewsets.ModelViewSet):
                 }
                 
                 try:
+                    # تحويل جميع قيم Decimal إلى float
+                    renter_notification_data = convert_decimal_to_float(renter_notification_data)
+                    
                     Notification.objects.create(
                         sender=rental.car.owner,  # Owner is the sender
                         receiver=rental.renter,    # Renter is the receiver
@@ -2261,7 +2318,7 @@ class RentalViewSet(viewsets.ModelViewSet):
         try:
             from documents.models import Document
             car_images = []
-            car_documents = Document.objects.filter(car=car)
+            car_documents = Document.objects.filter(car=car)  # type: ignore
             
             for doc in car_documents:
                 if hasattr(doc, 'file') and doc.file and doc.file.name:

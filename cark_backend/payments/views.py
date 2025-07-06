@@ -31,7 +31,7 @@ def get_car_images(car, request):
     try:
         from documents.models import Document
         car_images = []
-        car_documents = Document.objects.filter(car=car)
+        car_documents = Document.objects.filter(car=car)  # type: ignore
         
         for doc in car_documents:
             if hasattr(doc, 'file') and doc.file and doc.file.name:
@@ -140,7 +140,7 @@ class StartPaymentView(APIView):
 
         if saved_card_token:
             try:
-                card = SavedCard.objects.filter(token=saved_card_token, user=request.user).first()
+                card = SavedCard.objects.filter(token=saved_card_token, user=request.user).first()  # type: ignore
                 if not card:
                     return Response({"error": "You do not own this card token."}, status=403)
                 charge_response = paymob.charge_saved_card(saved_card_token, payment_token)
@@ -261,7 +261,7 @@ def paymob_webhook(request):
                     try:
                         # Try to find the order in our database by order_id
                         from selfdrive_rentals.models import SelfDrivePayment
-                        payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()
+                        payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()  # type: ignore
                         if payment_obj and payment_obj.rental and payment_obj.rental.renter:
                             user_obj = payment_obj.rental.renter
                             print(f"✅ Found user {user_obj.id} from SelfDrivePayment for Paymob order {paymob_order_id}.")
@@ -293,7 +293,7 @@ def paymob_webhook(request):
                 
                 # Fallback: Try to find from PaymentTransaction (if exists)
                 if not user_obj:
-                    transaction_in_db = PaymentTransaction.objects.filter(paymob_order_id=paymob_order_id).first()
+                    transaction_in_db = PaymentTransaction.objects.filter(paymob_order_id=paymob_order_id).first()  # type: ignore
                     if transaction_in_db:
                         user_obj = transaction_in_db.user
                         print(f"✅ Found user {user_obj.id} from existing transaction for Paymob order {paymob_order_id}.")
@@ -306,7 +306,7 @@ def paymob_webhook(request):
             if user_obj:
                 try:
                     # ابحث عن كارت بنفس آخر 4 أرقام لهذا اليوزر فقط
-                    existing_card = SavedCard.objects.filter(
+                    existing_card = SavedCard.objects.filter(  # type: ignore
                         user=user_obj,
                         card_last_four_digits=card_last_four_digits
                     ).first()
@@ -319,7 +319,7 @@ def paymob_webhook(request):
                         response_payload = {"message": "Card token updated for existing card.", "status": "success"}
                     else:
                         # أضف كارت جديد
-                        SavedCard.objects.create(
+                        SavedCard.objects.create(  # type: ignore
                             user=user_obj,
                             token=card_token,
                             card_brand=card_brand,
@@ -441,13 +441,13 @@ def paymob_webhook(request):
             amount_cents = int(transaction_data.get("amount_cents", 0))
             print(f"🔍 Searching for SelfDrivePayment with order_id: {paymob_order_id}")
             # ابحث أولاً بالـ order_id (تم حفظه مؤقتًا في deposit_transaction_id)
-            payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()
+            payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=paymob_order_id).first()  # type: ignore
             if payment_obj:
                 print(f"✅ Found payment_obj by order_id: {payment_obj.id}")
             if not payment_obj:
                 print(f"🔍 Searching for SelfDrivePayment with transaction_id: {transaction_id}")
                 # جرب البحث بالـ transaction_id
-                payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=transaction_id).first()
+                payment_obj = SelfDrivePayment.objects.filter(deposit_transaction_id=transaction_id).first()  # type: ignore
                 if payment_obj:
                     print(f"✅ Found payment_obj by transaction_id: {payment_obj.id}")
             if not payment_obj:
@@ -458,7 +458,7 @@ def paymob_webhook(request):
                     if len(merchant_parts) >= 4:
                         rental_id = merchant_parts[2]  # rental_id is the 3rd part
                         print(f"🔍 Extracted rental_id: {rental_id}")
-                        payment_obj = SelfDrivePayment.objects.filter(rental_id=rental_id).first()
+                        payment_obj = SelfDrivePayment.objects.filter(rental_id=rental_id).first()  # type: ignore
                         if payment_obj:
                             print(f"✅ Found payment_obj by rental_id: {payment_obj.id}")
                         else:
@@ -470,7 +470,7 @@ def paymob_webhook(request):
             if not payment_obj:
                 print(f"🔍 Trying to find payment by order_id in all SelfDrivePayments...")
                 # جرب البحث في كل الـ SelfDrivePayments بالـ order_id
-                all_payments = SelfDrivePayment.objects.all()
+                all_payments = SelfDrivePayment.objects.all()  # type: ignore
                 for payment in all_payments:
                     if str(payment.deposit_transaction_id) == str(paymob_order_id):
                         payment_obj = payment
@@ -639,7 +639,7 @@ def paymob_webhook(request):
                             print(f"🔍 Notification data keys: {list(notification_data.keys())}")
                             
                             # Notification for owner - more interactive and action-oriented
-                            owner_notification = Notification.objects.create(
+                            owner_notification = Notification.objects.create(  # type: ignore   
                                 sender=rental.renter,
                                 receiver=rental.car.owner,
                                 title="💰 Deposit Payment Received - Action Required",
@@ -676,7 +676,7 @@ def paymob_webhook(request):
                         
                         try:
                             # Notification for renter - confirmation and next steps
-                            renter_notification = Notification.objects.create(
+                            renter_notification = Notification.objects.create(  # type: ignore
                                 sender=rental.car.owner,
                                 receiver=rental.renter,
                                 title="✅ Deposit Payment Confirmed",
@@ -716,14 +716,14 @@ def paymob_webhook(request):
                     rental_id = merchant_parts[2]  # rental_id is the 3rd part
                     
                     # ابحث عن RentalPayment الذي يحمل deposit_transaction_id = order_id أو paymob_order_id
-                    payment_obj = RentalPayment.objects.filter(
+                    payment_obj = RentalPayment.objects.filter(  # type: ignore
                         rental_id=rental_id,
                         deposit_transaction_id=paymob_order_id
                     ).first()
                     
                     if not payment_obj:
                         # جرب البحث بالـ transaction_id أو بدون transaction_id
-                        payment_obj = RentalPayment.objects.filter(
+                        payment_obj = RentalPayment.objects.filter(  # type: ignore 
                             rental_id=rental_id,
                             deposit_paid_status__in=['Pending', 'Failed']
                         ).first()
@@ -863,7 +863,7 @@ def paymob_webhook(request):
                                 
                                 # Notification for owner
                                 try:
-                                    Notification.objects.create(
+                                    Notification.objects.create(  # type: ignore
                                         sender=rental.renter,
                                         receiver=rental.car.owner,
                                         title="Deposit Payment Received",
@@ -899,7 +899,7 @@ def paymob_webhook(request):
                                 }
                                 
                                 try:
-                                    Notification.objects.create(
+                                    Notification.objects.create(  # type: ignore
                                         sender=rental.car.owner,
                                         receiver=rental.renter,
                                         title="Deposit Payment Confirmed",
@@ -942,15 +942,15 @@ def paymob_webhook(request):
 
         # لو الغرض شحن المحفظة وتم الدفع بنجاح، زود الرصيد
         if merchant_order_id.startswith("wallet_recharge") and transaction_data.get("success", False):
-            wallet = Wallet.objects.get(user=user_obj)
+            wallet = Wallet.objects.get(user=user_obj)  # type: ignore
             amount_egp = Decimal(str(transaction_data.get("amount_cents", 0))) / Decimal('100')
             balance_before = wallet.balance
             wallet.balance += amount_egp
             wallet.save()
-            print(f"✅ Wallet recharged for user {user_obj.id} by {amount_egp} EGP.")
+            print(f"✅ Wallet recharged for user {user_obj.id} by {amount_egp} EGP.")  # type: ignore
             # إضافة سجل في WalletTransaction
-            transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')
-            WalletTransaction.objects.create(
+            transaction_type, _ = TransactionType.objects.get_or_create(name='شحن محفظة عبر فيزا')  # type: ignore
+            WalletTransaction.objects.create(  # type: ignore
                 wallet=wallet,
                 transaction_type=transaction_type,
                 amount=amount_egp,
@@ -977,7 +977,7 @@ class SavedCardsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        saved_cards = SavedCard.objects.filter(user=request.user)
+        saved_cards = SavedCard.objects.filter(user=request.user)  # type: ignore
         serializer_data = []
         for card in saved_cards:
             serializer_data.append({
@@ -1000,10 +1000,10 @@ class AddSavedCardView(APIView):
 class ListPaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        cards = SavedCard.objects.filter(user=request.user)
-        wallet = Wallet.objects.get(user=request.user)
+        cards = SavedCard.objects.filter(user=request.user)  # type: ignore
+        wallet = Wallet.objects.get(user=request.user)  # type: ignore
         methods = []
-        for card in cards:
+        for card in cards:  
             methods.append({
                 'type': 'card',
                 'id': card.id,
@@ -1026,20 +1026,20 @@ class PayView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
         data = serializer.validated_data
-        amount = data['amount']
-        method_type = data['payment_method_type']
-        method_id = data['payment_method_id']
-        payment_for = data['payment_for']
-        rental_type = data['rental_type']
-        rental_id = data['rental_id']
+        amount = data['amount']  # type: ignore
+        method_type = data['payment_method_type']  # type: ignore
+        method_id = data['payment_method_id']  # type: ignore
+        payment_for = data['payment_for']  # type: ignore
+        rental_type = data['rental_type']  # type: ignore
+        rental_id = data['rental_id']  # type: ignore
         user = request.user
         # تحقق من وسيلة الدفع
         if method_type == 'wallet':
-            wallet = get_object_or_404(Wallet, id=method_id, user=user)
+            wallet = get_object_or_404(Wallet, id=method_id, user=user)  # type: ignore
             if wallet.balance < amount:
                 return Response({'detail': 'Insufficient wallet balance', 'status': 'fail404'}, status=400)
         elif method_type == 'card':
-            card = get_object_or_404(SavedCard, id=method_id, user=user)
+            card = get_object_or_404(SavedCard, id=method_id, user=user)  # type: ignore
         else:
             return Response({'detail': 'Invalid payment method', 'status': 'fail404'}, status=400)
         # محاكاة الدفع
@@ -1070,7 +1070,7 @@ class PayView(APIView):
         # ربط الدفع بالـ Rental أو SelfDriveRental
         if rental_type == 'rental':
             rental = get_object_or_404(Rental, id=rental_id)
-            RentalPayment.objects.create(
+            RentalPayment.objects.create(  # type: ignore
                 rental=rental,
                 user=user,
                 amount=amount,
@@ -1080,7 +1080,7 @@ class PayView(APIView):
             )
         elif rental_type == 'selfdrive':
             rental = get_object_or_404(SelfDriveRental, id=rental_id)
-            SelfDrivePayment.objects.create(
+            SelfDrivePayment.objects.create(  # type: ignore
                 rental=rental,
                 user=user,
                 amount=amount,
@@ -1099,7 +1099,7 @@ class PayView(APIView):
 class AdminPaymentTransactionsView(APIView):
     permission_classes = [IsAdminUser]
     def get(self, request):
-        transactions = PaymentTransaction.objects.all().order_by('-created_at')
+        transactions = PaymentTransaction.objects.all().order_by('-created_at')  # type: ignore
         serializer = PaymentTransactionSerializer(transactions, many=True)
         return Response(serializer.data)
 
@@ -1118,12 +1118,12 @@ class ChargeSavedCardView(APIView):
         # جلب الكارت بناءً على id أو token
         if card_id:
             try:
-                card = SavedCard.objects.get(id=card_id, user=request.user)
-            except SavedCard.DoesNotExist:
+                card = SavedCard.objects.get(id=card_id, user=request.user)  # type: ignore
+            except SavedCard.DoesNotExist:  # type: ignore
                 return Response({"error": "Card not found or you do not own this card."}, status=404)
             saved_card_token = card.token
         else:
-            card = SavedCard.objects.filter(token=saved_card_token, user=request.user).first()
+            card = SavedCard.objects.filter(token=saved_card_token, user=request.user).first()  # type: ignore
             if not card:
                 return Response({"error": "You do not own this card token."}, status=403)
         try:
@@ -1183,14 +1183,14 @@ class ChargeSavedCardView(APIView):
                     amount_egp = amount_cents / 100
                     
                     # Check for self-drive rental payment
-                    payment_obj = SelfDrivePayment.objects.filter(
+                    payment_obj = SelfDrivePayment.objects.filter(  # type: ignore
                         deposit_transaction_id=order_id,
                         deposit_amount=amount_egp
                     ).first()
                     
                     if not payment_obj:
                         # Check for regular rental payment
-                        payment_obj = RentalPayment.objects.filter(
+                        payment_obj = RentalPayment.objects.filter(  # type: ignore
                             deposit_transaction_id=order_id,
                             deposit_amount=amount_egp
                         ).first()
@@ -1207,7 +1207,7 @@ class ChargeSavedCardView(APIView):
                                 if rental_type == "selfdrive":
                                     # Try to find self-drive rental
                                     from selfdrive_rentals.models import SelfDriveRental
-                                    rental = SelfDriveRental.objects.filter(id=rental_id).first()
+                                    rental = SelfDriveRental.objects.filter(id=rental_id).first()  # type: ignore
                                     if rental and hasattr(rental, 'payment'):
                                         payment_obj = rental.payment
                                         # Update the payment object with order_id
@@ -1216,7 +1216,7 @@ class ChargeSavedCardView(APIView):
                                 else:
                                     # Try to find regular rental
                                     from rentals.models import Rental
-                                    rental = Rental.objects.filter(id=rental_id).first()
+                                    rental = Rental.objects.filter(id=rental_id).first()  # type: ignore
                                     if rental and hasattr(rental, 'payment_info'):
                                         payment_obj = rental.payment_info
                                         # Update the payment object with order_id
@@ -1235,13 +1235,13 @@ class ChargeSavedCardView(APIView):
                         payment_obj.save()
                         
                         # Update rental status to Confirmed
-                        payment_obj.rental.status = 'Confirmed'
-                        payment_obj.rental.save()
+                        payment_obj.rental.status = 'Confirmed'  # type: ignore     
+                        payment_obj.rental.save()  # type: ignore
                         
                         print(f"✅ Updated payment and rental status for saved card payment")
                         
                         # Get rental details
-                        rental = payment_obj.rental
+                        rental = payment_obj.rental  # type: ignore
                         renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
                         car_name = f"{rental.car.brand} {rental.car.model}"
                         owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
@@ -1373,7 +1373,7 @@ class ChargeSavedCardView(APIView):
                         
                         # Notification for owner
                         try:
-                            Notification.objects.create(
+                            Notification.objects.create(  # type: ignore    
                                 sender=rental.renter,
                                 receiver=rental.car.owner,
                                 title="Deposit Payment Received",
@@ -1409,7 +1409,7 @@ class ChargeSavedCardView(APIView):
                         }
                         
                         try:
-                            Notification.objects.create(
+                            Notification.objects.create(  # type: ignore            
                                 sender=rental.car.owner,
                                 receiver=rental.renter,
                                 title="Deposit Payment Confirmed",

@@ -432,7 +432,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                             "transmissionType": rental.car.transmission_type,
                             "fuelType": rental.car.fuel_type,
                             "seatingCapacity": rental.car.seating_capacity,
-                            "currentOdometer": rental.car.current_odometer_reading,
+                            "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
                             "avgRating": float(rental.car.avg_rating),
                             "totalReviews": rental.car.total_reviews,
                             "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
@@ -547,7 +547,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                         "depositAmount": str(payment.deposit_amount),
                         "totalAmount": float(payment.rental_total_amount),
                         "remainingAmount": float(payment.remaining_amount),
-                        "pickupDate": rental.start_date.strftime("%Y-%m-%d %H:%M"),
+                        "pickupDate": rental.start_date.strftime("%Y-%m-%d at %H:%M"),
                         "pickupLocation": rental.pickup_address,
                         "nextStep": "Ready for pickup",
                         "status": "confirmed"
@@ -780,6 +780,9 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
             car_name = f"{rental.car.brand} {rental.car.model}"
             
+            # Get car images from documents
+            car_images = self._get_car_images(rental.car, request)
+            
             # Detailed notification data for renter pickup handover
             notification_data = {
                 "rentalId": rental.id,
@@ -792,17 +795,25 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 "dropoffAddress": rental.dropoff_address,
                 "ownerName": owner_name,
                 "carName": car_name,
-                "carPlateNumber": rental.car.plate_number,
-                "carBrand": rental.car.brand,
-                "carModel": rental.car.model,
-                "carYear": rental.car.year,
-                "carColor": rental.car.color,
-                "carType": rental.car.car_type,
-                "carCategory": rental.car.car_category,
-                "carTransmission": rental.car.transmission_type,
-                "carFuelType": rental.car.fuel_type,
-                "carSeatingCapacity": rental.car.seating_capacity,
-                "carCurrentOdometer": rental.car.current_odometer_reading,
+                
+                # Car details with images
+                "carDetails": {
+                    "plateNumber": rental.car.plate_number,
+                    "brand": rental.car.brand,
+                    "model": rental.car.model,
+                    "year": rental.car.year,
+                    "color": rental.car.color,
+                    "carType": rental.car.car_type,
+                    "carCategory": rental.car.car_category,
+                    "transmissionType": rental.car.transmission_type,
+                    "fuelType": rental.car.fuel_type,
+                    "seatingCapacity": rental.car.seating_capacity,
+                    "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                    "avgRating": float(rental.car.avg_rating),
+                    "totalReviews": rental.car.total_reviews,
+                    "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                    "images": car_images
+                },
                 
                 # Payment details for renter pickup handover
                 "depositAmount": float(payment.deposit_amount),
@@ -913,11 +924,28 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         rental = self.get_object()
         contract = rental.contract
         payment = rental.payment
+        
+        # إضافة logging للتشخيص
+        print(f"🔍 DEBUG: renter_pickup_handover for rental #{rental.id}")
+        print(f"🔍 DEBUG: owner_pickup_done = {contract.owner_pickup_done}")
+        print(f"🔍 DEBUG: renter_pickup_done = {contract.renter_pickup_done}")
+        print(f"🔍 DEBUG: payment_method = {payment.payment_method}")
+        print(f"🔍 DEBUG: remaining_paid_status = {payment.remaining_paid_status}")
+        print(f"🔍 DEBUG: Files in request = {list(request.FILES.keys())}")
+        print(f"🔍 DEBUG: Data in request = {list(request.data.keys())}")
+        
         # يجب أن يكون المالك عمل هاند أوفر
         if not contract.owner_pickup_done:
             return Response({'error_code': 'OWNER_PICKUP_REQUIRED', 'error_message': 'يجب أن يقوم المالك بتسليم السيارة أولاً.'}, status=400)
         if contract.renter_pickup_done:
-            return Response({'error_code': 'ALREADY_DONE', 'error_message': 'تم استلام السيارة من المستأجر بالفعل.'}, status=400)
+            # للـ development فقط - السماح بإعادة الهاند أوفر
+            if request.data.get('force_redo') == 'true':
+                print(f"🔄 FORCE REDO: Resetting renter_pickup_done for rental #{rental.id}")
+                contract.renter_pickup_done = False
+                contract.renter_pickup_done_at = None
+                contract.save()
+            else:
+                return Response({'error_code': 'ALREADY_DONE', 'error_message': 'تم استلام السيارة من المستأجر بالفعل.'}, status=400)
         # تحقق من رفع صورة السيارة وصورة العداد
         car_image = request.FILES.get('car_image')
         odometer_image = request.FILES.get('odometer_image')
@@ -944,11 +972,19 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         #from .models import SelfDriveOdometerImage
         #SelfDriveOdometerImage.objects.create(rental=rental, image=odometer_image, value=odometer_value, type='start')
         # تحقق من توقيع المستأجر
+        print(f"🔍 DEBUG: Before signing check - renter_signed = {contract.renter_signed}")
         if not contract.renter_signed:
             contract.renter_signed = True
             contract.renter_signed_at = timezone.now()
+            print(f"🔍 DEBUG: Renter signed the contract")
+        else:
+            print(f"🔍 DEBUG: Renter already signed the contract")
         # تحقق من دفع باقي المبلغ لو إلكتروني
         confirm_remaining_cash = request.data.get('confirm_remaining_cash')
+        print(f"🔍 DEBUG: Payment method = {payment.payment_method}")
+        print(f"🔍 DEBUG: Current remaining_paid_status = {payment.remaining_paid_status}")
+        print(f"🔍 DEBUG: confirm_remaining_cash = {confirm_remaining_cash}")
+        
         if payment.payment_method in ['visa', 'wallet']:
             if confirm_remaining_cash is not None:
                 return Response({'error_code': 'CASH_NOT_ALLOWED', 'error_message': 'الدفع إلكتروني ولا يمكن تأكيد استلام كاش.'}, status=400)
@@ -967,6 +1003,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             payment.remaining_paid_at = timezone.now() if result['success'] else None
             payment.remaining_transaction_id = result['transaction_id']
             payment.save()
+            print(f"🔍 DEBUG: After payment processing - remaining_paid_status = {payment.remaining_paid_status}")
             from .models import SelfDriveRentalLog
             SelfDriveRentalLog.objects.create(
                 rental=payment.rental,
@@ -982,11 +1019,16 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             if payment.payment_method == 'wallet':
                 # ... الكود القديم لو محفظة ...
                 pass
+            elif payment.payment_method == 'cash':
+                print(f"🔍 DEBUG: Cash payment - no automatic payment processing")
+                print(f"🔍 DEBUG: Cash payment requires manual confirmation")
         # لو كاش لا يتم أي تحديث هنا
         # نفذ هاند أوفر المستأجر
+        print(f"🔍 DEBUG: Before handover - renter_pickup_done = {contract.renter_pickup_done}")
         contract.renter_pickup_done = True
         contract.renter_pickup_done_at = timezone.now()
         contract.save()
+        print(f"🔍 DEBUG: Renter pickup handover completed")
         SelfDriveRentalLog.objects.create(rental=rental, action='renter_pickup_handover', user=request.user, details='Renter did pickup handover with car image and odometer.')
         
         # بدء الرحلة تلقائياً بعد اكتمال الهاند أوفر
@@ -994,17 +1036,33 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         trip_start_error = None
         
         try:
+            # إضافة logging مفصل للتشخيص
+            print(f"🔍 DEBUG: Trip start conditions check for rental #{rental.id}")
+            print(f"🔍 DEBUG: contract.renter_pickup_done = {contract.renter_pickup_done}")
+            print(f"🔍 DEBUG: contract.owner_pickup_done = {contract.owner_pickup_done}")
+            print(f"🔍 DEBUG: contract.renter_signed = {contract.renter_signed}")
+            print(f"🔍 DEBUG: contract.owner_signed = {contract.owner_signed}")
+            print(f"🔍 DEBUG: payment.deposit_paid_status = {payment.deposit_paid_status}")
+            print(f"🔍 DEBUG: payment.payment_method = {payment.payment_method}")
+            print(f"🔍 DEBUG: payment.remaining_paid_status = {payment.remaining_paid_status}")
+            print(f"🔍 DEBUG: rental.status = {rental.status}")
+            
             # نفس التشيكس الموجودة في start_trip
             if not (contract.renter_pickup_done and contract.owner_pickup_done and contract.renter_signed and contract.owner_signed):
                 trip_start_error = 'يجب إتمام التسليم والتوقيع من الطرفين قبل بدء الرحلة.'
+                print(f"❌ Trip start failed: Handover/Signing incomplete")
             elif payment.deposit_paid_status != 'Paid':
                 trip_start_error = 'يجب دفع العربون قبل بدء الرحلة.'
+                print(f"❌ Trip start failed: Deposit not paid")
             elif payment.payment_method in ['visa', 'wallet'] and payment.remaining_paid_status != 'Paid':
                 trip_start_error = 'يجب دفع باقي المبلغ إلكترونياً قبل بدء الرحلة.'
+                print(f"❌ Trip start failed: Remaining payment not paid for electronic payment")
             elif payment.payment_method == 'cash' and payment.remaining_paid_status != 'Confirmed':
                 trip_start_error = 'يجب تأكيد استلام باقي المبلغ كاش قبل بدء الرحلة.'
+                print(f"❌ Trip start failed: Cash remaining not confirmed")
             elif rental.status == 'Ongoing':
                 trip_start_error = 'تم بدء الرحلة بالفعل.'
+                print(f"❌ Trip start failed: Trip already ongoing")
             else:
                 # بدء الرحلة
                 old_status = rental.status
@@ -1025,6 +1083,18 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         # إرسال إشعارات محدثة
         try:
             from notifications.models import Notification
+            from decimal import Decimal
+            
+            # دالة مساعدة لتحويل Decimal إلى float
+            def convert_decimal_to_float(obj):
+                if isinstance(obj, dict):
+                    return {key: convert_decimal_to_float(value) for key, value in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_decimal_to_float(item) for item in obj]
+                elif isinstance(obj, Decimal):
+                    return float(obj)
+                else:
+                    return obj
             
             # Get names
             renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
@@ -1056,7 +1126,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                     "transmissionType": rental.car.transmission_type,
                     "fuelType": rental.car.fuel_type,
                     "seatingCapacity": rental.car.seating_capacity,
-                    "currentOdometer": rental.car.current_odometer_reading,
+                    "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
                     "avgRating": float(rental.car.avg_rating),
                     "totalReviews": rental.car.total_reviews,
                     "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
@@ -1074,9 +1144,9 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 
                 # Payment details
                 "paymentDetails": {
-                    "depositAmount": float(payment.deposit_amount),
-                    "remainingAmount": float(payment.remaining_amount),
-                    "totalAmount": float(payment.rental_total_amount),
+                    "depositAmount": float(payment.deposit_amount) if payment.deposit_amount else 0,
+                    "remainingAmount": float(payment.remaining_amount) if payment.remaining_amount else 0,
+                    "totalAmount": float(payment.rental_total_amount) if payment.rental_total_amount else 0,
                     "paymentMethod": payment.payment_method,
                     "depositPaidStatus": payment.deposit_paid_status,
                     "remainingPaidStatus": payment.remaining_paid_status,
@@ -1113,7 +1183,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 "handoverCompletedAt": contract.renter_pickup_done_at.isoformat(),
                 "carImageUploaded": True,
                 "odometerImageUploaded": True,
-                "odometerValue": odometer_value,
+                "odometerValue": float(odometer_value) if odometer_value else 0,
                 
                 # Trip status
                 "tripStarted": trip_started,
@@ -1124,8 +1194,8 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 "handoverMessage": f"Renter {renter_name} completed car pickup for {car_name}. Trip {'started successfully!' if trip_started else 'failed to start: ' + trip_start_error}",
                 "handoverStatus": "completed",
                 "handoverNotes": [
-                    f"Deposit paid: {float(payment.deposit_amount)} EGP",
-                    f"Remaining amount: {float(payment.remaining_amount)} EGP",
+                    f"Deposit paid: {float(payment.deposit_amount) if payment.deposit_amount else 0} EGP",
+                    f"Remaining amount: {float(payment.remaining_amount) if payment.remaining_amount else 0} EGP",
                     f"Payment method: {payment.payment_method.upper()}",
                     f"Payment status: {payment.remaining_paid_status}",
                     f"Trip duration: {(rental.end_date.date() - rental.start_date.date()).days + 1} days",
@@ -1136,7 +1206,95 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                     f"Handover completed at: {contract.renter_pickup_done_at.strftime('%Y-%m-%d %H:%M')}",
                     f"Trip status: {'Started' if trip_started else 'Failed to start'}"
                 ],
-                "event": "renter_pickup_completed"
+                "event": "renter_pickup_completed",
+                
+                # تفاصيل السيارة الكاملة
+                "carDetails": {
+                    "plateNumber": rental.car.plate_number,
+                    "brand": rental.car.brand,
+                    "model": rental.car.model,
+                    "year": rental.car.year,
+                    "color": rental.car.color,
+                    "carType": rental.car.car_type,
+                    "carCategory": rental.car.car_category,
+                    "transmissionType": rental.car.transmission_type,
+                    "fuelType": rental.car.fuel_type,
+                    "seatingCapacity": rental.car.seating_capacity,
+                    "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                    "avgRating": float(rental.car.avg_rating),
+                    "totalReviews": rental.car.total_reviews,
+                    "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                    "images": self._get_car_images(rental.car, request)
+                },
+                
+                # تفاصيل المالك
+                "ownerDetails": {
+                    "id": rental.car.owner.id,
+                    "name": owner_name,
+                    "phone": rental.car.owner.phone_number,
+                    "email": rental.car.owner.email,
+                    "rating": float(rental.car.owner.avg_rating) if hasattr(rental.car.owner, 'avg_rating') else 0,
+                    "reportsCount": rental.car.owner.reports_count if hasattr(rental.car.owner, 'reports_count') else 0
+                },
+                
+                # تفاصيل المستأجر
+                "renterDetails": {
+                    "id": rental.renter.id,
+                    "name": f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email,
+                    "phone": rental.renter.phone_number,
+                    "email": rental.renter.email,
+                    "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                    "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                },
+                
+                # تفاصيل العداد
+                "odometerDetails": {
+                    "startValue": float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "endValue": float(odometer_value),
+                    "totalKm": float(odometer_value) - float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "allowedKm": float(rental.breakdown.allowed_km) if hasattr(rental, 'breakdown') else 0,
+                    "extraKm": float(rental.breakdown.extra_km) if hasattr(rental, 'breakdown') else 0
+                },
+                
+                # تفاصيل الرحلة
+                "tripDetails": {
+                    "startDate": rental.start_date.isoformat(),
+                    "endDate": rental.end_date.isoformat(),
+                    "actualStartDate": contract.renter_pickup_done_at.isoformat(),
+                    "duration": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                    "pickupAddress": rental.pickup_address,
+                    "dropoffAddress": rental.dropoff_address,
+                    "pickupLatitude": rental.pickup_latitude,
+                    "pickupLongitude": rental.pickup_longitude,
+                    "dropoffLatitude": rental.dropoff_latitude,
+                    "dropoffLongitude": rental.dropoff_longitude
+                },
+                
+                # تفاصيل الدفع
+                "paymentDetails": {
+                    "depositAmount": float(payment.deposit_amount) if payment.deposit_amount else 0,
+                    "remainingAmount": float(payment.remaining_amount) if payment.remaining_amount else 0,
+                    "totalAmount": float(payment.rental_total_amount) if payment.rental_total_amount else 0,
+                    "paymentMethod": payment.payment_method,
+                    "depositPaidStatus": payment.deposit_paid_status,
+                    "remainingPaidStatus": payment.remaining_paid_status,
+                    "remainingPaidAt": payment.remaining_paid_at.isoformat() if payment.remaining_paid_at else None,
+                    "remainingTransactionId": payment.remaining_transaction_id,
+                    "selectedCardInfo": {
+                        "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                        "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                        "cardId": rental.selected_card.id if rental.selected_card else None
+                    } if rental.selected_card else None
+                },
+                # تفاصيل الأرباح (لو موجودة)
+                "earningsDetails": {
+                    "finalCost": float(rental.breakdown.final_cost) if hasattr(rental, 'breakdown') and rental.breakdown.final_cost else 0,
+                    "platformCommission": float(rental.breakdown.platform_earnings) if hasattr(rental, 'breakdown') and rental.breakdown.platform_earnings else 0,
+                    "driverEarnings": float(rental.breakdown.driver_earnings) if hasattr(rental, 'breakdown') and rental.breakdown.driver_earnings else 0,
+                    "commissionRate": float(rental.breakdown.commission_rate) if hasattr(rental, 'breakdown') and rental.breakdown.commission_rate else 0.2,
+                    "walletBalance": float(owner_wallet.balance) if 'owner_wallet' in locals() and owner_wallet.balance else 0, # type: ignore
+                    "balanceWarning": bool(owner_wallet.balance < -1000) if 'owner_wallet' in locals() else False # type: ignore
+                } if hasattr(rental, 'breakdown') else None
             })
             
             # Send notification to owner
@@ -1147,16 +1305,21 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 owner_title = "⚠️ Renter Completed Pickup"
                 owner_message = f"Renter {renter_name} has completed car pickup for {car_name} ✅\n\n❌ But trip didn't start: {trip_start_error}\n💡 Tip: Check that all requirements are met\n\n🚗 Car Details:\n• {car_name} ({rental.car.plate_number})\n• {rental.car.year} • {rental.car.color} • {rental.car.transmission_type}"
             
+            owner_navigation_id = "OWN_ONGOING" if trip_started else "OWN_RENTER_COMPLETE"
+            # تحويل جميع قيم Decimal إلى float
+            owner_notification_data = convert_decimal_to_float(owner_notification_data)
+            
             Notification.objects.create(
+                sender=rental.renter,  # Set sender to renter instead of null
                 receiver=rental.car.owner,
                 title=owner_title,
                 message=owner_message,
                 notification_type="RENTAL",
                 priority="HIGH",
                 data=owner_notification_data,
-                navigation_id="OWN_ONGOING" if trip_started else "OWN_RENTER_COMPLETE"
+                navigation_id=owner_navigation_id
             )
-            print(f"✅ Renter pickup completion notification sent to owner successfully")
+            print(f"✅ Renter pickup completion notification sent to owner successfully - Navigation ID: {owner_navigation_id}")
             
             # Send notification to renter confirming handover completion and trip start
             renter_notification_data = {
@@ -1173,7 +1336,95 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 "tripStartError": trip_start_error,
                 "nextStep": "trip_ongoing" if trip_started else "trip_start_failed",
                 "message": f"تم استلام السيارة بنجاح! الرحلة {'بدأت بنجاح!' if trip_started else 'لم تبدأ: ' + trip_start_error}",
-                "event": "renter_pickup_completed"
+                "event": "renter_pickup_completed",
+                
+                # تفاصيل السيارة الكاملة
+                "carDetails": {
+                    "plateNumber": rental.car.plate_number,
+                    "brand": rental.car.brand,
+                    "model": rental.car.model,
+                    "year": rental.car.year,
+                    "color": rental.car.color,
+                    "carType": rental.car.car_type,
+                    "carCategory": rental.car.car_category,
+                    "transmissionType": rental.car.transmission_type,
+                    "fuelType": rental.car.fuel_type,
+                    "seatingCapacity": rental.car.seating_capacity,
+                    "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                    "avgRating": float(rental.car.avg_rating),
+                    "totalReviews": rental.car.total_reviews,
+                    "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                    "images": self._get_car_images(rental.car, request)
+                },
+                
+                # تفاصيل المالك
+                "ownerDetails": {
+                    "id": rental.car.owner.id,
+                    "name": owner_name,
+                    "phone": rental.car.owner.phone_number,
+                    "email": rental.car.owner.email,
+                    "rating": float(rental.car.owner.avg_rating) if hasattr(rental.car.owner, 'avg_rating') else 0,
+                    "reportsCount": rental.car.owner.reports_count if hasattr(rental.car.owner, 'reports_count') else 0
+                },
+                
+                # تفاصيل المستأجر
+                "renterDetails": {
+                    "id": rental.renter.id,
+                    "name": f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email,
+                    "phone": rental.renter.phone_number,
+                    "email": rental.renter.email,
+                    "rating": float(rental.renter.avg_rating) if hasattr(rental.renter, 'avg_rating') else 0,
+                    "reportsCount": rental.renter.reports_count if hasattr(rental.renter, 'reports_count') else 0
+                },
+                
+                # تفاصيل العداد
+                "odometerDetails": {
+                    "startValue": float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "endValue": float(odometer_value),
+                    "totalKm": float(odometer_value) - float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "allowedKm": float(rental.breakdown.allowed_km) if hasattr(rental, 'breakdown') else 0,
+                    "extraKm": float(rental.breakdown.extra_km) if hasattr(rental, 'breakdown') else 0
+                },
+                
+                # تفاصيل الرحلة
+                "tripDetails": {
+                    "startDate": rental.start_date.isoformat(),
+                    "endDate": rental.end_date.isoformat(),
+                    "actualStartDate": contract.renter_pickup_done_at.isoformat(),
+                    "duration": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                    "pickupAddress": rental.pickup_address,
+                    "dropoffAddress": rental.dropoff_address,
+                    "pickupLatitude": rental.pickup_latitude,
+                    "pickupLongitude": rental.pickup_longitude,
+                    "dropoffLatitude": rental.dropoff_latitude,
+                    "dropoffLongitude": rental.dropoff_longitude
+                },
+                
+                # تفاصيل الدفع
+                "paymentDetails": {
+                    "depositAmount": float(payment.deposit_amount) if payment.deposit_amount else 0,
+                    "remainingAmount": float(payment.remaining_amount) if payment.remaining_amount else 0,
+                    "totalAmount": float(payment.rental_total_amount) if payment.rental_total_amount else 0,
+                    "paymentMethod": payment.payment_method,
+                    "depositPaidStatus": payment.deposit_paid_status,
+                    "remainingPaidStatus": payment.remaining_paid_status,
+                    "remainingPaidAt": payment.remaining_paid_at.isoformat() if payment.remaining_paid_at else None,
+                    "remainingTransactionId": payment.remaining_transaction_id,
+                    "selectedCardInfo": {
+                        "cardBrand": rental.selected_card.card_brand if rental.selected_card else None,
+                        "cardLast4": rental.selected_card.card_last_four_digits if rental.selected_card else None,
+                        "cardId": rental.selected_card.id if rental.selected_card else None
+                    } if rental.selected_card else None
+                },
+                # تفاصيل الأرباح (لو موجودة)
+                "earningsDetails": {
+                    "finalCost": float(rental.breakdown.final_cost) if hasattr(rental, 'breakdown') and rental.breakdown.final_cost else 0,
+                    "platformCommission": float(rental.breakdown.platform_earnings) if hasattr(rental, 'breakdown') and rental.breakdown.platform_earnings else 0,
+                    "driverEarnings": float(rental.breakdown.driver_earnings) if hasattr(rental, 'breakdown') and rental.breakdown.driver_earnings else 0,
+                    "commissionRate": float(rental.breakdown.commission_rate) if hasattr(rental, 'breakdown') and rental.breakdown.commission_rate else 0.2,
+                    "walletBalance": float(owner_wallet.balance) if 'owner_wallet' in locals() and owner_wallet.balance else 0, # type: ignore          
+                    "balanceWarning": bool(owner_wallet.balance < -1000) if 'owner_wallet' in locals() else False # type: ignore  
+                } if hasattr(rental, 'breakdown') else None
             }
             
             if trip_started:
@@ -1183,22 +1434,28 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 renter_title = "✅ Car Pickup Completed"
                 renter_message = f"Car {car_name} has been successfully picked up! ✅\n\n❌ But trip didn't start: {trip_start_error}\n💡 Tip: Check that all requirements are met or contact technical support"
             
-            Notification.objects.create(
+            renter_navigation_id = "REN_ONGOING" if trip_started else "REN_PICKUP_COMPLETE"
+            # تحويل جميع قيم Decimal إلى float
+            renter_notification_data = convert_decimal_to_float(renter_notification_data)
+            
+            Notification.objects.create(  # type: ignore
+                sender=rental.car.owner,  # Set sender to owner
                 receiver=rental.renter,
                 title=renter_title,
                 message=renter_message,
                 notification_type="RENTAL",
                 priority="MEDIUM",
                 data=renter_notification_data,
-                navigation_id="REN_ONGOING" if trip_started else "REN_PICKUP_COMPLETE"
+                navigation_id=renter_navigation_id
             )
-            print(f"✅ Renter pickup completion confirmation notification sent to renter successfully")
+            print(f"✅ Renter pickup completion confirmation notification sent to renter successfully - Navigation ID: {renter_navigation_id}")
             
         except Exception as e:
             print(f"❌ Error sending renter pickup completion notifications: {e}")
             import traceback
             traceback.print_exc()
         
+        print(f"🔍 DEBUG: Final response - trip_started = {trip_started}, trip_start_error = {trip_start_error}")
         return Response({
             'status': 'تم استلام السيارة من المستأجر.',
             'renter_signed': contract.renter_signed,
@@ -1503,6 +1760,75 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             'excess_transaction_id': payment.excess_transaction_id,
             'payment_method': payment.payment_method
         }
+
+        # --- إرسال النوتفكيشن بعد انتهاء الرحلة ---
+        try:
+            from notifications.models import Notification
+            from wallets.models import Wallet
+            renter = rental.renter
+            owner = rental.car.owner
+            car = rental.car
+            car_name = f"{car.brand} {car.model}"
+            owner_name = f"{owner.first_name} {owner.last_name}".strip() or owner.email
+            renter_name = f"{renter.first_name} {renter.last_name}".strip() or renter.email
+            now_iso = timezone.now().isoformat()
+            # --- بيانات مشتركة ---
+            notification_data_common = {
+                'rentalId': rental.id,
+                'carId': car.id,
+                'carName': car_name,
+                'ownerName': owner_name,
+                'renterName': renter_name,
+                'excessAmount': float(payment.excess_amount) if payment.excess_amount is not None else 0,
+                'excessPaidStatus': payment.excess_paid_status,
+                'paymentMethod': payment.payment_method,
+                'tripStatus': 'finished',
+                'timestamp': now_iso,
+                'nextAction': 'view_summary',
+                'navigationTarget': 'summary',
+            }
+            # --- للمستأجر ---
+            Notification.objects.create(
+                sender=owner,
+                receiver=renter,
+                title="🎉 Trip Completed Successfully",
+                message=f"Your trip with {car_name} has been completed successfully! Thank you for using our service. You can view your trip summary for details.",
+                notification_type="RENTAL",
+                priority="HIGH",
+                data={**notification_data_common},
+                navigation_id="TRIP_COMPLETED",
+                is_read=False
+            )
+            # --- للمالك ---
+            owner_wallet = Wallet.objects.get(user=owner)
+            balance = float(owner_wallet.balance)
+            driver_earnings = float(getattr(rental.breakdown, 'driver_earnings', 0))
+            platform_commission = float(getattr(rental.breakdown, 'platform_earnings', 0))
+            if payment.payment_method in ['visa', 'wallet']:
+                owner_message = f"Trip completed successfully! Your earnings of {driver_earnings} EGP have been added to your wallet. Current balance: {balance} EGP"
+                if balance < 0:
+                    owner_message += f"\n⚠️ Warning: Your wallet balance is negative ({balance} EGP). Please recharge your wallet to accept new bookings."
+            else:
+                owner_message = f"Trip completed successfully! Platform commission of {platform_commission} EGP has been deducted from your wallet. Current balance: {balance} EGP"
+                if balance < 0:
+                    owner_message += f"\n⚠️ Warning: Your wallet balance is negative ({balance} EGP). Please recharge your wallet to accept new bookings."
+            Notification.objects.create(
+                sender=renter,
+                receiver=owner,
+                title="🎉 Trip Completed - Earnings Updated",
+                message=owner_message,
+                notification_type="RENTAL",
+                priority="HIGH",
+                data={**notification_data_common},
+                navigation_id="TRIP_COMPLETED_OWNER",
+                is_read=False
+            )
+        except Exception as e:
+            print(f"❌ Error sending trip completed notifications: {e}")
+            import traceback
+            traceback.print_exc()
+        # --- نهاية النوتفكيشن ---
+
         return Response({
             'status': 'Owner return handover complete. Trip finished.',
             'excess_amount': payment.excess_amount,
@@ -1521,20 +1847,18 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             'longitude': last_location.longitude,
             'timestamp': last_location.timestamp
         })
-
-    # @action(detail=True, methods=['post'])
-    # def request_location(self, request, pk=None):
-    #     rental = self.get_object()
-    #     # تخيلي: حفظ طلب الموقع
-    #     lat = request.data.get('latitude')
-    #     lng = request.data.get('longitude')
-    #     SelfDriveLiveLocation.objects.create(rental=rental, latitude=lat, longitude=lng)
-    #     SelfDriveRentalLog.objects.create(rental=rental, action='location_requested', user=request.user, details=f'Location requested: {lat}, {lng}')
-    #     return Response({'status': 'تم حفظ الموقع.'})
     
     @action(detail=True, methods=['post'])
     def request_location(self, request, pk=None):
         rental = self.get_object()
+        
+        # تحقق من أن المستخدم إما مالك السيارة أو المستأجر
+        if request.user not in [rental.car.owner, rental.renter]:
+            return Response({
+                'error_code': 'UNAUTHORIZED', 
+                'error_message': 'فقط مالك السيارة أو المستأجر يمكنه طلب الموقع.'
+            }, status=403)
+        
         # استخدم الدالة الوهمية لجلب إحداثيات عشوائية
         lat, lng = get_random_lat_lng()
         SelfDriveLiveLocation.objects.create(rental=rental, latitude=lat, longitude=lng)
@@ -1544,87 +1868,111 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             user=request.user,
             details=f'Location requested: {lat}, {lng}'
         )
-        return Response({'status': 'تم حفظ الموقع.', 'latitude': lat, 'longitude': lng})
-    
-    @action(detail=True, methods=['post'])
-    # def renter_dropoff_handover(self, request, pk=None):
-    #     rental = self.get_object()
-    #     contract = rental.contract
-    #     if contract.renter_return_done:
-    #         return Response({'error_code': 'RENTER_RETURN_HANDOVER_ALREADY_DONE', 'error_message': 'تم تنفيذ تسليم المستأجر (نهاية الرحلة) بالفعل ولا يمكن تكراره.'}, status=400)
-    #     payment = rental.payment
-    #     odometer_image = request.FILES.get('odometer_image')
-    #     odometer_value = request.data.get('odometer_value')
-    #     car_image = request.FILES.get('car_image')
-    #     notes = request.data.get('notes', '')
-    #     if not odometer_image or not odometer_value:
-    #         return Response({'error_code': 'ODOMETER_END_REQUIRED', 'error_message': 'صورة وقراءة عداد النهاية مطلوبة.'}, status=400)
-    #     if not car_image:
-    #         return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'يجب رفع صورة العربية عند التسليم.'}, status=400)
-    #     from .models import SelfDriveOdometerImage, SelfDriveCarImage
-    #     SelfDriveOdometerImage.objects.create(
-    #         rental=rental,
-    #         image=odometer_image,
-    #         value=float(odometer_value),
-    #         type='end'
-    #     )
-    #     SelfDriveCarImage.objects.create(rental=rental, image=car_image, type='return', uploaded_by='renter', notes=notes)
-    #     actual_dropoff_time = timezone.now()
-    #     try:
-    #         payment = calculate_selfdrive_payment(rental, actual_dropoff_time=actual_dropoff_time)
-    #     except ValueError as e:
-    #         return Response({'error_code': 'INVALID_DATA', 'error_message': str(e)}, status=400)
-    #     # إذا كان هناك زيادة يجب دفعها إلكترونيًا
-    #     if payment.excess_amount > 0 and payment.payment_method in ['visa', 'wallet'] and payment.excess_paid_status != 'Paid':
-    #         from payments.services.payment_gateway import simulate_payment_gateway
-    #         payment_response = simulate_payment_gateway(
-    #             amount=payment.excess_amount,
-    #             payment_method=payment.payment_method,
-    #             user=request.user
-    #         )
-    #         if payment_response.success:
-    #             payment.excess_paid_status = 'Paid'
-    #             payment.excess_paid_at = timezone.now()
-    #             payment.excess_transaction_id = payment_response.transaction_id
-    #             payment.save()
-    #             from .models import SelfDriveRentalLog
-    #             SelfDriveRentalLog.objects.create(
-    #                 rental=payment.rental,
-    #                 action='payment',
-    #                 user=request.user,
-    #                 details=f'Excess payment: {payment_response.transaction_id}'
-    #             )
-    #         else:
-    #             return Response({'error_code': 'EXCESS_PAYMENT_FAILED', 'error_message': payment_response.message}, status=400)
-    #     contract.renter_return_done = True
-    #     contract.renter_return_done_at = actual_dropoff_time
-    #     contract.save()
-    #     SelfDriveRentalLog.objects.create(rental=rental, action='renter_dropoff_handover', user=request.user, details='Renter did dropoff handover. Excess calculated.')
-    #     # Build excess details and payment info
-    #     breakdown = getattr(rental, 'breakdown', None)
-    #     excess_details = None
-    #     if breakdown:
-    #         excess_details = {
-    #             'extra_km_fee': breakdown.extra_km_fee,
-    #             'late_fee': breakdown.late_fee,
-    #             'extra_km': breakdown.extra_km,
-    #             'extra_km_cost': breakdown.extra_km_cost,
-    #             'late_days': breakdown.late_days,
-    #             'late_fee_per_day': breakdown.daily_price,
-    #             'late_fee_service_percent': 30
-    #         }
-    #     excess_payment = {
-    #         'excess_paid_status': payment.excess_paid_status,
-    #         'excess_paid_at': payment.excess_paid_at,
-    #         'excess_transaction_id': payment.excess_transaction_id,
-    #         'payment_method': payment.payment_method
-    #     }
-    #     return Response({
-    #         'status': 'تم تسليم السيارة من المستأجر (نهاية الرحلة).',
-    #         'excess_amount': payment.excess_amount,
-    #         'excess_details': excess_details,
-    #         'excess_payment': excess_payment
-    #     })
+        
+        # إرسال النوتفكيشن المناسبة
+        try:
+            from notifications.models import Notification
+            
+            # تحديد من طلب الموقع
+            requester_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.email
+            car_name = f"{rental.car.brand} {rental.car.model}"
+            current_time = timezone.now().strftime("%Y-%m-%d %H:%M")
+            
+            if request.user == rental.car.owner:
+                # المالك طلب موقع السيارة
+                
+                # نوتفكيشن تأكيد للمالك (الطالب)
+                owner_confirmation_data = {
+                    "rentalId": rental.id,
+                    "carId": rental.car.id,
+                    "requestType": "location_requested",
+                    "renterName": f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email,
+                    "carName": car_name,
+                    "latitude": lat,
+                    "longitude": lng,
+                    "timestamp": timezone.now().isoformat(),
+                    "status": "requested",
+                    "action": "location_requested"
+                }
+                
+                Notification.objects.create(
+                    sender=rental.car.owner,
+                    receiver=rental.car.owner,
+                    title="✅ Car Location Request Successful",
+                    message=f"Car location request for {car_name} completed successfully. Current location: {lat}, {lng}",
+                    notification_type="LOCATION",
+                    priority="HIGH",
+                    data=owner_confirmation_data,
+                    navigation_id="LOCATION_REQUESTED",
+                    is_read=False
+                )
+                
+                # نوتفكيشن إعلام للمستأجر
+                renter_notification_data = {
+                    "rentalId": rental.id,
+                    "carId": rental.car.id,
+                    "requestType": "location_shared",
+                    "ownerName": requester_name,
+                    "carName": car_name,
+                    "latitude": lat,
+                    "longitude": lng,
+                    "timestamp": timezone.now().isoformat(),
+                    "status": "shared",
+                    "action": "location_shared",
+                    
+                    # تفاصيل السيارة الكاملة
+                    "carDetails": {
+                        "plateNumber": rental.car.plate_number,
+                        "brand": rental.car.brand,
+                        "model": rental.car.model,
+                        "year": rental.car.year,
+                        "color": rental.car.color,
+                        "carType": rental.car.car_type,
+                        "carCategory": rental.car.car_category,
+                        "transmissionType": rental.car.transmission_type,
+                        "fuelType": rental.car.fuel_type,
+                        "seatingCapacity": rental.car.seating_capacity,
+                        "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                        "avgRating": float(rental.car.avg_rating),
+                        "totalReviews": rental.car.total_reviews,
+                        "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                        "images": self._get_car_images(rental.car, request)
+                    }
+                }
+                
+                Notification.objects.create(
+                    sender=rental.car.owner,
+                    receiver=rental.renter,
+                    title="📍 Car Location Shared",
+                    message=f"Car location for {car_name} was requested and shared at {current_time}",
+                    notification_type="LOCATION",
+                    priority="HIGH",
+                    data=renter_notification_data,
+                    navigation_id="LOCATION_SHARED",
+                    is_read=False
+                )
+                
+            else:
+                # المستأجر لا يمكنه طلب الموقع - إرجاع خطأ
+                return Response({
+                    'error_code': 'UNAUTHORIZED_ACTION', 
+                    'error_message': 'فقط مالك السيارة يمكنه طلب موقع السيارة.'
+                }, status=403)
+            
+            print(f"✅ Location request notifications sent successfully for rental {rental.id}")
+            
+        except Exception as e:
+            print(f"❌ Error sending location request notifications: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return Response({
+            'status': 'تم طلب موقع السيارة بنجاح.',
+            'latitude': lat, 
+            'longitude': lng,
+            'requester': 'owner',
+            'message': f"تم طلب موقع السيارة بنجاح"
+        })
 
     @action(detail=True, methods=['post'])
     def renter_dropoff_handover(self, request, pk=None):
@@ -1718,6 +2066,187 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         contract.renter_return_done_at = actual_dropoff_time
         contract.save()
         SelfDriveRentalLog.objects.create(rental=rental, action='renter_dropoff_handover', user=request.user, details='Renter did dropoff handover. Excess calculated.')
+        
+        # إرسال النوتفكيشن المناسبة
+        try:
+            from notifications.models import Notification
+            
+            renter_name = f"{rental.renter.first_name} {rental.renter.last_name}".strip() or rental.renter.email
+            owner_name = f"{rental.car.owner.first_name} {rental.car.owner.last_name}".strip() or rental.car.owner.email
+            car_name = f"{rental.car.brand} {rental.car.model}"
+            current_time = timezone.now().strftime("%Y-%m-%d %H:%M")
+            
+            # نوتفكيشن للمستأجر - تأكيد تسليم السيارة
+            renter_notification_data = {
+                "rentalId": rental.id,
+                "carId": rental.car.id,
+                "handoverType": "renter_dropoff_completed",
+                "carName": car_name,
+                "ownerName": owner_name,
+                "excessAmount": float(payment.excess_amount),
+                "excessPaidStatus": payment.excess_paid_status,
+                "paymentMethod": payment.payment_method,
+                "odometerValue": float(odometer_value),
+                "timestamp": timezone.now().isoformat(),
+                "nextAction": "owner_dropoff_handover",
+                "navigationTarget": "summary",
+                
+                # تفاصيل السيارة الكاملة
+                "carDetails": {
+                    "plateNumber": rental.car.plate_number,
+                    "brand": rental.car.brand,
+                    "model": rental.car.model,
+                    "year": rental.car.year,
+                    "color": rental.car.color,
+                    "carType": rental.car.car_type,
+                    "carCategory": rental.car.car_category,
+                    "transmissionType": rental.car.transmission_type,
+                    "fuelType": rental.car.fuel_type,
+                    "seatingCapacity": rental.car.seating_capacity,
+                    "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                    "avgRating": float(rental.car.avg_rating),
+                    "totalReviews": rental.car.total_reviews,
+                    "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                    "images": self._get_car_images(rental.car, request)
+                },
+                
+                # تفاصيل العداد
+                "odometerDetails": {
+                    "startValue": float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "endValue": float(odometer_value),
+                    "totalKm": float(odometer_value) - float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "allowedKm": float(rental.breakdown.allowed_km) if hasattr(rental, 'breakdown') else 0,
+                    "extraKm": float(rental.breakdown.extra_km) if hasattr(rental, 'breakdown') else 0
+                },
+                
+                # تفاصيل الرحلة
+                "tripDetails": {
+                    "startDate": rental.start_date.isoformat(),
+                    "endDate": rental.end_date.isoformat(),
+                    "actualEndDate": actual_dropoff_time.isoformat(),
+                    "duration": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                    "pickupAddress": rental.pickup_address,
+                    "dropoffAddress": rental.dropoff_address
+                }
+            }
+            
+            # إضافة تفاصيل الدفع حسب نوع الدفع
+            if payment.payment_method in ['visa', 'wallet']:
+                if payment.excess_amount > 0:
+                    if payment.excess_paid_status == 'Paid':
+                        payment_message = f"Excess amount of {payment.excess_amount} EGP has been automatically paid using your {payment.payment_method.upper()} card."
+                        if hasattr(rental, 'selected_card') and rental.selected_card:
+                            payment_message += f" Card: ****{rental.selected_card.card_last_four_digits}"
+                    else:
+                        payment_message = f"Excess amount of {payment.excess_amount} EGP will be charged to your {payment.payment_method.upper()} card."
+                else:
+                    payment_message = "No excess amount to pay."
+            else:  # cash
+                if payment.excess_amount > 0:
+                    payment_message = f"Please pay the excess amount of {payment.excess_amount} EGP in cash to the owner during handover."
+                else:
+                    payment_message = "No excess amount to pay."
+            
+            Notification.objects.create(
+                sender=rental.car.owner,
+                receiver=rental.renter,
+                title="✅ Car Return Handover Completed",
+                message=f"Your car return handover for {car_name} has been completed successfully. {payment_message} Please wait for the owner to complete their handover to finish the trip.",
+                notification_type="HANDOVER",
+                priority="HIGH",
+                data=renter_notification_data,
+                navigation_id="RENTER_DROPOFF_COMPLETED",
+                is_read=False
+            )
+            
+            # نوتفكيشن للمالك - إعلام بتسليم المستأجر
+            owner_notification_data = {
+                "rentalId": rental.id,
+                "carId": rental.car.id,
+                "handoverType": "renter_dropoff_completed",
+                "carName": car_name,
+                "renterName": renter_name,
+                "excessAmount": float(payment.excess_amount),
+                "excessPaidStatus": payment.excess_paid_status,
+                "paymentMethod": payment.payment_method,
+                "odometerValue": float(odometer_value),
+                "timestamp": timezone.now().isoformat(),
+                "nextAction": "owner_dropoff_handover",
+                "navigationTarget": "owner_dropoff_handover",
+                
+                # تفاصيل السيارة الكاملة
+                "carDetails": {
+                    "plateNumber": rental.car.plate_number,
+                    "brand": rental.car.brand,
+                    "model": rental.car.model,
+                    "year": rental.car.year,
+                    "color": rental.car.color,
+                    "carType": rental.car.car_type,
+                    "carCategory": rental.car.car_category,
+                    "transmissionType": rental.car.transmission_type,
+                    "fuelType": rental.car.fuel_type,
+                    "seatingCapacity": rental.car.seating_capacity,
+                    "currentOdometer": float(rental.car.current_odometer_reading) if rental.car.current_odometer_reading else 0,
+                    "avgRating": float(rental.car.avg_rating),
+                    "totalReviews": rental.car.total_reviews,
+                    "dailyPrice": float(rental.car.rental_options.daily_rental_price) if hasattr(rental.car, 'rental_options') else 0,
+                    "images": self._get_car_images(rental.car, request)
+                },
+                
+                # تفاصيل العداد
+                "odometerDetails": {
+                    "startValue": float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "endValue": float(odometer_value),
+                    "totalKm": float(odometer_value) - float(rental.odometer_images.filter(type='start').first().value) if rental.odometer_images.filter(type='start').first() else 0,
+                    "allowedKm": float(rental.breakdown.allowed_km) if hasattr(rental, 'breakdown') else 0,
+                    "extraKm": float(rental.breakdown.extra_km) if hasattr(rental, 'breakdown') else 0
+                },
+                
+                # تفاصيل الرحلة
+                "tripDetails": {
+                    "startDate": rental.start_date.isoformat(),
+                    "endDate": rental.end_date.isoformat(),
+                    "actualEndDate": actual_dropoff_time.isoformat(),
+                    "duration": (rental.end_date.date() - rental.start_date.date()).days + 1,
+                    "pickupAddress": rental.pickup_address,
+                    "dropoffAddress": rental.dropoff_address
+                }
+            }
+            
+            # رسالة مختلفة للمالك حسب نوع الدفع
+            if payment.payment_method in ['visa', 'wallet']:
+                if payment.excess_amount > 0:
+                    if payment.excess_paid_status == 'Paid':
+                        owner_message = f"Renter has completed car return. Excess amount of {payment.excess_amount} EGP has been automatically paid."
+                    else:
+                        owner_message = f"Renter has completed car return. Excess amount of {payment.excess_amount} EGP will be processed automatically."
+                else:
+                    owner_message = f"Renter has completed car return. No excess amount to collect."
+            else:  # cash
+                if payment.excess_amount > 0:
+                    owner_message = f"Renter has completed car return. Please collect {payment.excess_amount} EGP in cash during your handover."
+                else:
+                    owner_message = f"Renter has completed car return. No cash collection needed."
+            
+            Notification.objects.create(
+                sender=rental.renter,
+                receiver=rental.car.owner,
+                title="🚗 Car Return Handover - Action Required",
+                message=f"{owner_message} Please complete your dropoff handover to finish the trip.",
+                notification_type="HANDOVER",
+                priority="HIGH",
+                data=owner_notification_data,
+                navigation_id="OWNER_DROPOFF_REQUIRED",
+                is_read=False
+            )
+            
+            print(f"✅ Renter dropoff handover notifications sent successfully for rental {rental.id}")
+            
+        except Exception as e:
+            print(f"❌ Error sending renter dropoff notifications: {e}")
+            import traceback
+            traceback.print_exc()
+        
         # Build excess details and payment info
         breakdown = getattr(rental, 'breakdown', None)
         excess_details = None
@@ -1749,6 +2278,7 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def owner_dropoff_handover(self, request, pk=None):
+        from wallets.models import Wallet, WalletTransaction, TransactionType
         rental = self.get_object()
         contract = rental.contract
         
@@ -1866,6 +2396,75 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             'excess_transaction_id': payment.excess_transaction_id,
             'payment_method': payment.payment_method
         }
+
+        # --- إرسال النوتفكيشن بعد انتهاء الرحلة ---
+        try:
+            from notifications.models import Notification
+            from wallets.models import Wallet
+            renter = rental.renter
+            owner = rental.car.owner
+            car = rental.car
+            car_name = f"{car.brand} {car.model}"
+            owner_name = f"{owner.first_name} {owner.last_name}".strip() or owner.email
+            renter_name = f"{renter.first_name} {renter.last_name}".strip() or renter.email
+            now_iso = timezone.now().isoformat()
+            # --- بيانات مشتركة ---
+            notification_data_common = {
+                'rentalId': rental.id,
+                'carId': car.id,
+                'carName': car_name,
+                'ownerName': owner_name,
+                'renterName': renter_name,
+                'excessAmount': float(payment.excess_amount) if payment.excess_amount is not None else 0,
+                'excessPaidStatus': payment.excess_paid_status,
+                'paymentMethod': payment.payment_method,
+                'tripStatus': 'finished',
+                'timestamp': now_iso,
+                'nextAction': 'view_summary',
+                'navigationTarget': 'summary',
+            }
+            # --- للمستأجر ---
+            Notification.objects.create(
+                sender=owner,
+                receiver=renter,
+                title="🎉 Trip Completed Successfully",
+                message=f"Your trip with {car_name} has been completed successfully! Thank you for using our service. You can view your trip summary for details.",
+                notification_type="RENTAL",
+                priority="HIGH",
+                data={**notification_data_common},
+                navigation_id="TRIP_COMPLETED",
+                is_read=False
+            )
+            # --- للمالك ---
+            owner_wallet = Wallet.objects.get(user=owner)
+            balance = float(owner_wallet.balance)
+            driver_earnings = float(getattr(rental.breakdown, 'driver_earnings', 0))
+            platform_commission = float(getattr(rental.breakdown, 'platform_earnings', 0))
+            if payment.payment_method in ['visa', 'wallet']:
+                owner_message = f"Trip completed successfully! Your earnings of {driver_earnings} EGP have been added to your wallet. Current balance: {balance} EGP"
+                if balance < 0:
+                    owner_message += f"\n⚠️ Warning: Your wallet balance is negative ({balance} EGP). Please recharge your wallet to accept new bookings."
+            else:
+                owner_message = f"Trip completed successfully! Platform commission of {platform_commission} EGP has been deducted from your wallet. Current balance: {balance} EGP"
+                if balance < 0:
+                    owner_message += f"\n⚠️ Warning: Your wallet balance is negative ({balance} EGP). Please recharge your wallet to accept new bookings."
+            Notification.objects.create(
+                sender=renter,
+                receiver=owner,
+                title="🎉 Trip Completed - Earnings Updated",
+                message=owner_message,
+                notification_type="RENTAL",
+                priority="HIGH",
+                data={**notification_data_common},
+                navigation_id="TRIP_COMPLETED_OWNER",
+                is_read=False
+            )
+        except Exception as e:
+            print(f"❌ Error sending trip completed notifications: {e}")
+            import traceback
+            traceback.print_exc()
+        # --- نهاية النوتفكيشن ---
+
         return Response({
             'status': 'Owner return handover complete. Trip finished.',
             'excess_amount': payment.excess_amount,
