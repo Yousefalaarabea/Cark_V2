@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 import re
 
 class CarViewSet(viewsets.ModelViewSet):
-    queryset = Car.objects.all()  # type: ignore
+    queryset = Car.objects.all().order_by('-created_at')  # type: ignore
     serializer_class = CarSerializer
     #permission_classes = [IsAuthenticated]
 
@@ -89,7 +89,7 @@ class CarRentalOptionsViewSet(viewsets.ModelViewSet):  # type: ignore
 
 
 class CarStatsViewSet(viewsets.ModelViewSet):
-    queryset = CarStats.objects.all()  # type: ignore
+    queryset = CarStats.objects.all().order_by('-id')  # type: ignore
     serializer_class = CarStatsSerializer
     permission_classes = [IsAuthenticated]
 
@@ -246,7 +246,7 @@ class CarUsagePolicyViewSet(viewsets.ModelViewSet): # type: ignore
 class MyCarsView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
-        cars = Car.objects.filter(owner=request.user)  # type: ignore   
+        cars = Car.objects.filter(owner=request.user).order_by('-created_at')  # type: ignore   
         serializer = CarSerializer(cars, many=True)
         return Response(serializer.data)
 
@@ -1355,7 +1355,7 @@ class AvailableCarsView(APIView):
         max_price = request.query_params.get('max_price')
         
         # Start with all cars (will apply filters later)
-        queryset = Car.objects.all().select_related('rental_options', 'usage_policy', 'stats')  # type: ignore
+        queryset = Car.objects.filter(availability=True).select_related('rental_options', 'usage_policy', 'stats')  # type: ignore
         
         # Filter by date range (check if car is not booked during this period)
         if available_from and available_to:
@@ -1429,10 +1429,7 @@ class AvailableCarsView(APIView):
         
         # Apply basic filters (only if no specific filters are provided, show all cars)
         # But ensure we have basic car data
-        queryset = queryset.filter(
-            availability=True,
-            current_status='Available'
-        )
+        queryset = queryset.filter(current_status='Available')
         
         # Only filter by approval_status if needed for production
         # queryset = queryset.filter(approval_status=True)

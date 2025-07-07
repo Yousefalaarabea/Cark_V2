@@ -194,10 +194,7 @@ class DocumentVerificationViewSet(viewsets.ModelViewSet):
 
 
 class DocumentsNeedingVerificationView(ListAPIView):
-    queryset = Document.objects.filter(
-        Q(verifications__verification_type='Admin', verifications__status='Pending') |
-        Q(verifications__verification_type='ML', verifications__status='Pending')
-    ).distinct()
+    queryset = Document.objects.filter(status='Pending')
     serializer_class = DocumentSerializer
 
 

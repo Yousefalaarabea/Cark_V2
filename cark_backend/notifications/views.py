@@ -178,8 +178,8 @@ class NotificationViewSet(viewsets.ModelViewSet):
             notification = Notification.objects.create( # type: ignore
                 sender=user,
                 receiver=user,  # Send to self for testing
-                title="Test Booking Request",
-                message="This is a test booking request notification",
+                title="🚗 Test Notification!",
+                message=f"This is a test booking request notification - Please check your notifications! 🎯",
                 notification_type="RENTAL",
                 priority="HIGH",
                 data={

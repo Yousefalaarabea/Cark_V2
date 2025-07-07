@@ -49,8 +49,8 @@ class NotificationService:
             notification = Notification.objects.create( # type: ignore
                 sender=rental.renter,  # Renter is the sender
                 receiver=car_owner,    # Car owner is the receiver
-                title="New Booking Request",
-                message=f"{renter_name} has requested to rent your {car_name}",
+                title="🚗 New Booking Request!",
+                message=f"Great news! {renter_name} has requested to rent your {car_name}. Check the details and respond quickly to secure your booking!",
                 notification_type="RENTAL",
                 priority="HIGH",
                 data=notification_data,
@@ -88,10 +88,10 @@ class NotificationService:
             
             # Create status-specific messages
             status_messages = {
-                'Confirmed': f"Your booking request for {rental.car.brand} {rental.car.model} has been confirmed",
-                'Canceled': f"Your booking request for {rental.car.brand} {rental.car.model} has been canceled",
-                'Ongoing': f"Your rental for {rental.car.brand} {rental.car.model} has started",
-                'Finished': f"Your rental for {rental.car.brand} {rental.car.model} has been completed",
+                'Confirmed': f"🎉 Excellent! Your booking request for {rental.car.brand} {rental.car.model} has been confirmed successfully!",
+                'Canceled': f"❌ Unfortunately, your booking request for {rental.car.brand} {rental.car.model} has been canceled.",
+                'Ongoing': f"🚗 Great! Your rental for {rental.car.brand} {rental.car.model} has started. Enjoy your trip!",
+                'Finished': f"🏁 Congratulations! Your rental for {rental.car.brand} {rental.car.model} has been completed successfully!",
             }
             
             message = status_messages.get(new_status, f"Rental status changed from {old_status} to {new_status}")
@@ -110,7 +110,7 @@ class NotificationService:
             notification = Notification.objects.create( # type: ignore
                 sender=sender,
                 receiver=receiver,
-                title=f"Rental Status Update - {new_status}",
+                title="📊 Rental Status Update - {new_status}!",
                 message=message,
                 notification_type="RENTAL",
                 priority="NORMAL",
@@ -161,7 +161,7 @@ class NotificationService:
             notification = Notification.objects.create( # type: ignore
                 sender=sender,
                 receiver=receiver,
-                title=f"Payment {status}",
+                title="💰 Payment {status}!",
                 message=message,
                 notification_type="PAYMENT",
                 priority="HIGH" if status == "Paid" else "NORMAL",

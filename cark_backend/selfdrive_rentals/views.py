@@ -122,11 +122,10 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
                 
                 # Create notification
                 notification = Notification.objects.create(  # type: ignore
-                
                     sender=rental.renter,  # Renter is the sender
                     receiver=rental.car.owner,    # Car owner is the receiver
-                    title="New Booking Request",
-                    message=f"{renter_name} has requested to rent your {car_name}",
+                    title="🚗 New Booking Request!",
+                    message=f"{renter_name} wants to rent your car {car_name}. Check the details and respond quickly to secure your booking!",
                     notification_type="RENTAL",
                     priority="HIGH",
                     data=notification_data,
@@ -675,8 +674,8 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             notification = Notification.objects.create(
                 sender=rental.car.owner,  # Owner is the sender
                 receiver=rental.renter,   # Renter is the receiver
-                title="Booking Request Accepted",
-                message=f"Your booking request for {car_name} has been accepted by the owner. You need to pay the deposit amount of {deposit_amount} EGP within 24 hours.",
+                title="🎉 Booking Request Accepted!",
+                message=f"Great news! Your booking request for {car_name} has been accepted by the owner. Please pay the deposit amount of {deposit_amount} EGP within 24 hours to confirm your rental.",
                 notification_type="RENTAL",
                 priority="HIGH",
                 data=notification_data,
@@ -870,10 +869,16 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
             }
             
             # Send notification to renter
+            remaining_message = ""
+            if payment.payment_method == 'cash':
+                remaining_message = f"💰 المبلغ المتبقي للدفع: {float(payment.remaining_amount)} جنيه نقداً"
+            else:
+                remaining_message = f"💳 المبلغ المتبقي: {float(payment.remaining_amount)} جنيه (سيتم خصمها تلقائياً من الكارت)"
+            
             Notification.objects.create(
                 receiver=rental.renter,
                 title="🚗 Ready to Start Your Trip!",
-                message=f"Hey {rental.renter.first_name}! The owner {owner_name} is ready to hand over your car {car_name} 🎯\n\n✅ You can now complete the handover and start your amazing trip!\n💡 Remember: Check the car condition and sign the contract before driving",
+                message=f"Hey {rental.renter.first_name}! The owner {owner_name} is ready to hand over your car {car_name} 🎯\n\n{remaining_message}\n✅ You can now complete the handover and start your amazing trip!\n💡 Remember: Check the car condition and sign the contract before driving",
                 notification_type="RENTAL",
                 priority="HIGH",
                 data=notification_data,
@@ -2279,9 +2284,9 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def owner_dropoff_handover(self, request, pk=None):
         from wallets.models import Wallet, WalletTransaction, TransactionType
+        from .models import SelfDriveOdometerImage, SelfDriveCarImage
         rental = self.get_object()
         contract = rental.contract
-        
         # لا يمكن تنفيذ هاند أوفر المالك إلا بعد هاند أوفر المستأجر
         if not contract.renter_return_done:
             return Response({'error_code': 'RENTER_HANDOVER_REQUIRED', 'error_message': 'يجب أن يقوم المستأجر بتسليم السيارة أولاً.'}, status=400)
@@ -2290,21 +2295,42 @@ class SelfDriveRentalViewSet(viewsets.ModelViewSet):
         notes = request.data.get('notes', '')
         payment = rental.payment
 
+        # --- استقبال صور العداد وصورة السيارة ---
+        odometer_image = request.FILES.get('odometer_image')
+        odometer_value = request.data.get('odometer_value')
+        car_image = request.FILES.get('car_image')
+        # التحقق من وجود الصور والقيم المطلوبة
+        if not odometer_image or not odometer_value:
+            return Response({'error_code': 'ODOMETER_END_REQUIRED', 'error_message': 'صورة وقراءة عداد النهاية مطلوبة.'}, status=400)
+        if not car_image:
+            return Response({'error_code': 'CAR_IMAGE_REQUIRED', 'error_message': 'يجب رفع صورة العربية عند التسليم.'}, status=400)
+        # حفظ صورة السيارة
+        car_identifier = getattr(rental.car, 'plate_number', None) or getattr(rental.car, 'model', 'car')
+        car_identifier = str(car_identifier).replace(' ', '_')
+        rental_type = 'return'
+        car_image.name = f"{car_identifier}_{rental_type}_car_owner_{rental.id}.png"
+        SelfDriveCarImage.objects.create(rental=rental, image=car_image, type=rental_type, uploaded_by='owner', notes=notes)
+        # حفظ صورة العداد
+        odometer_image.name = f"{car_identifier}_{rental_type}_odometer_owner_{rental.id}.png"
+        SelfDriveOdometerImage.objects.create(
+            rental=rental,
+            image=odometer_image,
+            value=float(odometer_value),
+            type='end'
+        )
+
         # تحقق من عدم السماح بتأكيد الكاش في الدفع الإلكتروني
         confirm_excess_cash = request.data.get('confirm_excess_cash')
         if payment.payment_method in ['visa', 'wallet']:
-            if confirm_excess_cash is not None:
-                return Response({'error_code': 'CASH_NOT_ALLOWED', 'error_message': 'الدفع إلكتروني ولا يمكن تأكيد استلام كاش.'}, status=400)
-        # --- لا تغير أي شيء في الكونتراكت هنا ---
-        if payment.payment_method == 'cash':
-            confirm_excess_cash = request.data.get('confirm_excess_cash')
+            # تجاهل confirm_excess_cash لو مبعوتة مع الدفع الإلكتروني
+            pass
+        elif payment.payment_method == 'cash':
             if payment.excess_amount > 0:
                 if payment.excess_paid_status != 'Paid':
                     if str(confirm_excess_cash).lower() == 'true':
                         payment.excess_paid_status = 'Paid'
                         payment.excess_paid_at = timezone.now()
                         payment.excess_transaction_id = f'excess_cash_{rental.id}'  # محاكاة معرف المعاملة
- 
                         payment.save()
                     else:
                         return Response({'error_code': 'EXCESS_CASH_CONFIRM_REQUIRED', 'error_message': 'يجب على المالك تأكيد استلام الزيادة كاش عبر confirm_excess_cash=true.'}, status=400)
@@ -3917,3 +3943,204 @@ class RentalPreviewView(APIView):
             
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+class CurrentOdometerReadingView(APIView):
+    """
+    إضافة قراءة عداد الكيلومتر الحالي وحساب جميع التفاصيل والزيادات
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, rental_id):
+        try:
+            # الحصول على الرينتال
+            rental = get_object_or_404(SelfDriveRental, id=rental_id)
+            
+            # التحقق من أن المستخدم إما المستأجر أو صاحب السيارة
+            if request.user not in [rental.renter, rental.car.owner]:
+                return Response({
+                    'error': 'غير مصرح لك بالوصول لهذا الحجز'
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # التحقق من أن الحجز في حالة نشطة
+            if rental.status not in ['Ongoing', 'Confirmed']:
+                return Response({
+                    'error': 'يمكن إضافة قراءة العداد فقط للحجوزات النشطة'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # الحصول على البيانات المطلوبة
+            current_odometer = request.data.get('currentOdometer')
+            if not current_odometer:
+                return Response({
+                    'error': 'يجب إدخال قراءة العداد الحالية'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                current_odometer = float(current_odometer)
+            except (ValueError, TypeError):
+                return Response({
+                    'error': 'قراءة العداد يجب أن تكون رقم صحيح أو عشري'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # الحصول على قراءة العداد الابتدائية
+            start_odometer_image = rental.odometer_images.filter(type='start').first()
+            if not start_odometer_image:
+                return Response({
+                    'error': 'لم يتم العثور على قراءة العداد الابتدائية'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            start_odometer = float(start_odometer_image.value)
+            
+            # التحقق من أن القراءة الحالية أكبر من الابتدائية
+            if current_odometer < start_odometer:
+                return Response({
+                    'error': 'قراءة العداد الحالية لا يمكن أن تكون أقل من القراءة الابتدائية'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # حساب الكيلومترات المستخدمة
+            used_kilometers = current_odometer - start_odometer
+            
+            # الحصول على تفاصيل الحجز
+            breakdown = rental.breakdown
+            policy = rental.car.usage_policy
+            
+            # الحصول على البيانات المطلوبة للحساب
+            agreed_kilometers = float(breakdown.allowed_km)
+            agreed_days = int(breakdown.num_days)
+            extra_km_rate = float(policy.extra_km_cost)
+            
+            # حساب الوقت الحالي والوقت المتفق عليه
+            current_time = timezone.now()
+            agreed_end_time = rental.end_date
+            
+            # حساب الأيام الإضافية
+            if current_time > agreed_end_time:
+                extra_days = (current_time.date() - agreed_end_time.date()).days
+            else:
+                extra_days = 0
+            
+            # حساب الكيلومترات الإضافية
+            extra_kilometers = max(0, used_kilometers - agreed_kilometers)
+            
+            # حساب التكاليف الإضافية
+            extra_km_cost = extra_kilometers * extra_km_rate
+            extra_days_cost = extra_days * float(breakdown.daily_price)
+            
+            # حساب التكلفة الإجمالية للزيادات
+            total_extras_cost = extra_km_cost + extra_days_cost
+            
+            # حساب التكلفة النهائية
+            final_cost = float(breakdown.initial_cost) + total_extras_cost
+            
+            # إعادة حساب breakdown من جديد
+            breakdown.extra_km = extra_kilometers
+            breakdown.extra_km_cost = extra_km_rate
+            breakdown.extra_km_fee = extra_km_cost
+            breakdown.late_days = extra_days
+            breakdown.late_fee = extra_days_cost
+            breakdown.total_extras_cost = total_extras_cost
+            breakdown.final_cost = final_cost
+            breakdown.actual_dropoff_time = current_time
+            
+            # إعادة حساب الأرباح
+            commission_rate = breakdown.commission_rate
+            platform_earnings = final_cost * commission_rate
+            driver_earnings = final_cost - platform_earnings
+            breakdown.platform_earnings = platform_earnings
+            breakdown.driver_earnings = driver_earnings
+            
+            breakdown.save()
+            
+            # تحديث payment
+            payment = rental.payment
+            payment.excess_amount = total_extras_cost
+            payment.rental_total_amount = final_cost
+            payment.save()
+            
+            # إنشاء log
+            SelfDriveRentalLog.objects.create(
+                rental=rental,
+                action='odometer_reading',
+                user=request.user,
+                details=f"Current odometer: {current_odometer}, Used: {used_kilometers}km, Extra: {extra_kilometers}km, Extra days: {extra_days}"
+            )
+            
+            # إرسال إشعار
+            try:
+                from notifications.models import Notification
+                
+                # تحديد المستلم (الطرف الآخر)
+                receiver = rental.car.owner if request.user == rental.renter else rental.renter
+                sender_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.email
+                
+                notification_data = {
+                    "rentalId": rental.id,
+                    "currentOdometer": current_odometer,
+                    "usedKilometers": used_kilometers,
+                    "extraKilometers": extra_kilometers,
+                    "extraDays": extra_days,
+                    "totalExtrasCost": total_extras_cost,
+                    "finalCost": final_cost,
+                    "senderName": sender_name
+                }
+                
+                Notification.objects.create(
+                    sender=request.user,
+                    receiver=receiver,
+                    title="📊 Odometer Reading Updated!",
+                    message=f"New odometer reading has been added: {current_odometer} km. Trip progress is being tracked! 🚗",
+                    notification_type="RENTAL",
+                    priority="MEDIUM",
+                    data=notification_data,
+                    navigation_id="ODOMETER_UPDATE",
+                    is_read=False
+                )
+            except Exception as e:
+                print(f"Error sending odometer notification: {str(e)}")
+            
+            # إرجاع التفاصيل الكاملة
+            response_data = {
+                'rental_id': rental.id,
+                'odometer_details': {
+                    'start_odometer': start_odometer,
+                    'current_odometer': current_odometer,
+                    'used_kilometers': used_kilometers,
+                    'agreed_kilometers': agreed_kilometers,
+                    'extra_kilometers': extra_kilometers
+                },
+                'time_details': {
+                    'agreed_end_date': agreed_end_time.isoformat(),
+                    'current_time': current_time.isoformat(),
+                    'agreed_days': agreed_days,
+                    'extra_days': extra_days
+                },
+                'cost_details': {
+                    'initial_cost': float(breakdown.initial_cost),
+                    'extra_km_rate': extra_km_rate,
+                    'extra_km_cost': extra_km_cost,
+                    'daily_price': float(breakdown.daily_price),
+                    'extra_days_cost': extra_days_cost,
+                    'total_extras_cost': total_extras_cost,
+                    'final_cost': final_cost
+                },
+                'breakdown_summary': {
+                    'base_cost': float(breakdown.base_cost),
+                    'ctw_fee': float(breakdown.ctw_fee),
+                    'platform_earnings': float(breakdown.platform_earnings),
+                    'driver_earnings': float(breakdown.driver_earnings)
+                },
+                'payment_status': {
+                    'deposit_amount': float(payment.deposit_amount),
+                    'deposit_paid_status': payment.deposit_paid_status,
+                    'remaining_amount': float(payment.remaining_amount),
+                    'remaining_paid_status': payment.remaining_paid_status,
+                    'excess_amount': float(payment.excess_amount),
+                    'excess_paid_status': payment.excess_paid_status
+                }
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': f'حدث خطأ أثناء معالجة الطلب: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

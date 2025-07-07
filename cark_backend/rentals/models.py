@@ -154,8 +154,8 @@ class PlannedTrip(models.Model):
 class PlannedTripStop(models.Model):
     planned_trip = models.ForeignKey(PlannedTrip, on_delete=models.CASCADE, related_name='stops')
     stop_order = models.PositiveIntegerField()
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    latitude = models.DecimalField(max_digits=20, decimal_places=15)
+    longitude = models.DecimalField(max_digits=20, decimal_places=15)
     approx_waiting_time_minutes = models.PositiveIntegerField(default=0)  # type: ignore
     address = models.CharField(max_length=255, null=True, blank=True)  # عنوان المحطة
     is_completed = models.BooleanField(default=False)  # type: ignore

@@ -167,13 +167,9 @@ class RateOwnerSerializer(BaseRatingSerializer):
         # التحقق من الرحلة
         rental = self.validate_rental_data(rental_type, rental_id)
 
-        # التحقق أن المستخدم هو المستأجر
-        if user != rental.renter:
-            raise serializers.ValidationError({'error': 'Only renters can rate owners.'})
-
-        # التحقق أن الرحلة انتهت
-        if rental.status != 'Finished':
-            raise serializers.ValidationError({'error': 'Cannot rate before rental is finished.'})
+        # التحقق أن الرحلة موجودة وليست ملغية
+        if rental.status == 'Cancelled':
+            raise serializers.ValidationError({'error': 'Cannot rate cancelled rentals.'})
 
         # التحقق من وجود UserRole للمالك
         owner_userrole = UserRole.objects.filter(user=rental.car.owner, role__role_name='Owner').first()  # type: ignore
@@ -218,13 +214,9 @@ class RateRenterSerializer(BaseRatingSerializer):
         # التحقق من الرحلة
         rental = self.validate_rental_data(rental_type, rental_id)
 
-        # التحقق أن المستخدم هو المالك
-        if user != rental.car.owner:
-            raise serializers.ValidationError({'error': 'Only owners can rate renters.'})
-
-        # التحقق أن الرحلة انتهت
-        if rental.status != 'Finished':
-            raise serializers.ValidationError({'error': 'Cannot rate before rental is finished.'})
+        # التحقق أن الرحلة موجودة وليست ملغية
+        if rental.status == 'Cancelled':
+            raise serializers.ValidationError({'error': 'Cannot rate cancelled rentals.'})
 
         # التحقق من وجود UserRole للمستأجر
         renter_userrole = UserRole.objects.filter(user=rental.renter, role__role_name='Renter').first()  # type: ignore
@@ -269,13 +261,9 @@ class RateCarSerializer(BaseRatingSerializer):
         # التحقق من الرحلة
         rental = self.validate_rental_data(rental_type, rental_id)
 
-        # التحقق أن المستخدم هو المستأجر
-        if user != rental.renter:
-            raise serializers.ValidationError({'error': 'Only renters can rate cars.'})
-
-        # التحقق أن الرحلة انتهت
-        if rental.status != 'Finished':
-            raise serializers.ValidationError({'error': 'Cannot rate before rental is finished.'})
+        # التحقق أن الرحلة موجودة وليست ملغية
+        if rental.status == 'Cancelled':
+            raise serializers.ValidationError({'error': 'Cannot rate cancelled rentals.'})
 
         # التحقق من التقييمات المكررة
         self.check_duplicate_rating(

@@ -6,8 +6,11 @@ from .models import User, Role, UserRole
 from rest_framework import viewsets , generics, permissions
 from .models import User, Role, UserRole
 from .serializers import RegisterSerializer, RoleSerializer, UserRoleSerializer, UserUpdatePermissionsSerializer
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework import serializers
 
 User = get_user_model()
 
@@ -22,7 +25,7 @@ class RoleViewSet(viewsets.ModelViewSet):
 
 class UserRoleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = UserRole.objects.all()
+    queryset = UserRole.objects.all().order_by('-id')
     serializer_class = UserRoleSerializer
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -125,3 +128,25 @@ class UpdateUserPermissionsAPIView(APIView):
     def patch(self, request, user_id):
         """تحديث جزئي لصلاحيات المستخدم"""
         return self.put(request, user_id)
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    username_field = 'email'
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+        
+        if not email or not password:
+            raise serializers.ValidationError('يجب إدخال البريد الإلكتروني وكلمة المرور')
+        
+        user = authenticate(request=self.context.get('request'), email=email, password=password)
+        if not user:
+            raise serializers.ValidationError('بيانات الدخول غير صحيحة')
+        
+        # إضافة email للـ attrs قبل استدعاء super().validate
+        attrs['username'] = user.email
+        data = super().validate(attrs)
+        return data
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

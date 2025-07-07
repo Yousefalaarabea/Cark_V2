@@ -51,7 +51,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "salt-claire-trek-book.trycloudflare.com",
+    "charge-consisting-inserted-disaster.trycloudflare.com",
     "*",  # Allow all hosts for development (remove in production)
 ]
 
@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'wallets',
     'feedback',
     'notifications',
+    'admin_dashboard',
     
 ]
 
@@ -226,3 +227,7 @@ LOGGING = {
         },
     },
 }
+
+import os
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

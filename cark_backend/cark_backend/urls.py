@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/wallets/', include('wallets.urls')),  # إضافة رابط الـ API للمحفظة
     path('api/feedback/', include('feedback.urls')),  # إضافة رابط الـ API للتقييمات والتقارير
     path('api/notifications/', include('notifications.urls')),  # إضافة رابط الـ API للإشعارات
+    path('api/admin/', include('admin_dashboard.urls')),  # إضافة رابط الـ API للإدارة
 ]
 
  #أثناء التطوير فقط: السماح لخادم Django أن يخدم ملفات الميديا

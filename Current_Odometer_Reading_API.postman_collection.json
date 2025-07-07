@@ -1,0 +1,297 @@
+{
+	"info": {
+		"_postman_id": "current-odometer-reading-api",
+		"name": "Current Odometer Reading API",
+		"description": "API لإضافة قراءة عداد الكيلومتر الحالي لحجز السيلف درايف",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Add Current Odometer Reading",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"currentOdometer\": 15000.5\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/selfdrive-rentals/{{rental_id}}/current-odometer/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"current-odometer",
+						""
+					]
+				},
+				"description": "إضافة قراءة عداد الكيلومتر الحالي لحجز السيلف درايف"
+			},
+			"response": [
+				{
+					"name": "Success Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentOdometer\": 15000.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/selfdrive-rentals/{{rental_id}}/current-odometer/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"current-odometer",
+								""
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"rental_id\": 123,\n    \"odometer_details\": {\n        \"start_odometer\": 14000.0,\n        \"current_odometer\": 15000.5,\n        \"used_kilometers\": 1000.5,\n        \"agreed_kilometers\": 800.0,\n        \"extra_kilometers\": 200.5\n    },\n    \"time_details\": {\n        \"agreed_end_date\": \"2024-01-15T18:00:00Z\",\n        \"current_time\": \"2024-01-16T10:30:00Z\",\n        \"agreed_days\": 2,\n        \"extra_days\": 1\n    },\n    \"cost_details\": {\n        \"initial_cost\": 500.0,\n        \"extra_km_rate\": 2.0,\n        \"extra_km_cost\": 401.0,\n        \"daily_price\": 200.0,\n        \"extra_days_cost\": 200.0,\n        \"total_extras_cost\": 601.0,\n        \"final_cost\": 1101.0\n    },\n    \"breakdown_summary\": {\n        \"base_cost\": 400.0,\n        \"ctw_fee\": 100.0,\n        \"platform_earnings\": 220.2,\n        \"driver_earnings\": 880.8\n    },\n    \"payment_status\": {\n        \"deposit_amount\": 75.0,\n        \"deposit_paid_status\": \"Paid\",\n        \"remaining_amount\": 425.0,\n        \"remaining_paid_status\": \"Paid\",\n        \"excess_amount\": 601.0,\n        \"excess_paid_status\": \"Pending\"\n    }\n}"
+				},
+				{
+					"name": "Error - Missing Odometer",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/selfdrive-rentals/{{rental_id}}/current-odometer/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"current-odometer",
+								""
+							]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"error\": \"يجب إدخال قراءة العداد الحالية\"\n}"
+				},
+				{
+					"name": "Error - Unauthorized",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer invalid_token",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"currentOdometer\": 15000.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/selfdrive-rentals/{{rental_id}}/current-odometer/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"selfdrive-rentals",
+								"{{rental_id}}",
+								"current-odometer",
+								""
+							]
+						}
+					},
+					"status": "Unauthorized",
+					"code": 401,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"detail\": \"Authentication credentials were not provided.\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Add Current Odometer with Extra Kilometers",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"currentOdometer\": 16000.0\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/selfdrive-rentals/{{rental_id}}/current-odometer/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"current-odometer",
+						""
+					]
+				},
+				"description": "إضافة قراءة عداد مع كيلومترات إضافية"
+			},
+			"response": []
+		},
+		{
+			"name": "Add Current Odometer with Extra Days",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"currentOdometer\": 14500.0\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/selfdrive-rentals/{{rental_id}}/current-odometer/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"selfdrive-rentals",
+						"{{rental_id}}",
+						"current-odometer",
+						""
+					]
+				},
+				"description": "إضافة قراءة عداد مع أيام إضافية (عندما يكون الوقت الحالي بعد انتهاء الحجز)"
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		},
+		{
+			"key": "rental_id",
+			"value": "123",
+			"type": "string"
+		}
+	]
+} 

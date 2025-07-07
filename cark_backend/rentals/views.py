@@ -108,8 +108,8 @@ class RentalViewSet(viewsets.ModelViewSet):
             try:
                 Notification.objects.create(
                     receiver=rental.car.owner,
-                    title="New Booking Request",
-                    message=f"{renter_name} has requested to rent your {car_name}",
+                    title="🚗 New Booking Request!",
+                    message=f"Great news! {renter_name} has requested to rent your {car_name}. Check the details and respond quickly to secure your booking!",
                     notification_type="RENTAL",
                     priority="HIGH",
                     data=notification_data,
@@ -292,8 +292,8 @@ class RentalViewSet(viewsets.ModelViewSet):
         try:
             Notification.objects.create(
                 receiver=rental.renter,
-                title="Booking Request Accepted",
-                message=f"Your booking request for {car_name} has been accepted by the owner. You need to pay the deposit amount of {payment.deposit_amount or 0} EGP within 24 hours.",
+                title="🎉 Booking Request Accepted!",
+                message=f"Excellent! Your booking request for {car_name} has been accepted by the owner. Please pay the deposit amount of {payment.deposit_amount or 0} EGP within 24 hours to confirm your rental.",
                 notification_type="RENTAL",
                 priority="HIGH",
                 data=notification_data,
@@ -518,8 +518,8 @@ class RentalViewSet(viewsets.ModelViewSet):
             
             Notification.objects.create(
                 receiver=rental.renter,
-                title="السائق وصل",
-                message=f"السائق وصل إلى {rental.pickup_address}. يمكن بدء الرحلة الآن.",
+                title="🚗 Driver Arrived!",
+                message=f"Great news! Your driver has arrived at {rental.pickup_address}. You can now start your trip! 🎯",
                 notification_type="RENTAL",
                 priority="HIGH",
                 data=notification_data,
@@ -552,7 +552,7 @@ class RentalViewSet(viewsets.ModelViewSet):
             },
             'next_actions': [
                 'Renter can now announce "I am on my way"',
-                'Trip can be started when renter arrives'
+                'Trip can be started when renter arrives at pickup location'
             ],
             'trip_progress': {
                 'current_step': 'Owner Arrival Confirmed',
@@ -849,8 +849,8 @@ class RentalViewSet(viewsets.ModelViewSet):
                     notification = Notification.objects.create(
                         sender=rental.renter,  # Renter is the sender
                         receiver=rental.car.owner,    # Car owner is the receiver
-                        title="Deposit Payment Received",
-                        message=f"{renter_name} has paid the deposit of {payment.deposit_amount} EGP for {car_name} using saved card",
+                        title="💰 Deposit Payment Received!",
+                        message=f"Excellent! {renter_name} has successfully paid the deposit of {payment.deposit_amount} EGP for {car_name} using saved card. Your rental is now confirmed!",
                         notification_type="PAYMENT",
                         priority="HIGH",
                         data=notification_data,
@@ -888,8 +888,8 @@ class RentalViewSet(viewsets.ModelViewSet):
                     Notification.objects.create(
                         sender=rental.car.owner,  # Owner is the sender
                         receiver=rental.renter,    # Renter is the receiver
-                        title="Deposit Payment Confirmed",
-                        message=f"Your deposit payment of {payment.deposit_amount} EGP for {car_name} has been confirmed",
+                        title="✅ Deposit Payment Confirmed!",
+                        message=f"Perfect! Your deposit payment of {payment.deposit_amount} EGP for {car_name} has been confirmed successfully. Your rental is now active!",
                         notification_type="PAYMENT",
                         priority="HIGH",
                         data=renter_notification_data,
@@ -1242,8 +1242,8 @@ class RentalViewSet(viewsets.ModelViewSet):
         from notifications.models import Notification
         Notification.objects.create(
             receiver=rental.renter,
-            title="Trip Started",
-            message=f"Your trip with {rental.car.brand} {rental.car.model} has started. Enjoy your ride!",
+            title="🎉 Trip Started Successfully!",
+            message=f"Excellent! Your trip with {rental.car.brand} {rental.car.model} has started. Enjoy your amazing journey! 🚗✨",
             notification_type="RENTAL",
             data={
                 'rental_id': rental.id, 
@@ -1434,8 +1434,8 @@ class RentalViewSet(viewsets.ModelViewSet):
         from notifications.models import Notification
         Notification.objects.create(
             receiver=rental.renter,
-            title=f"Arrived at Stop #{stop_order}",
-            message=f"Your driver has arrived at stop #{stop_order}: {stop.address}",
+            title=f"📍 Arrived at Stop #{stop_order}!",
+            message=f"Great news! Your driver has arrived at stop #{stop_order}: {stop.address}. You can now proceed with your journey! 🚗",
             notification_type="RENTAL",
             data={
                 'rental_id': rental.id,
@@ -1593,8 +1593,8 @@ class RentalViewSet(viewsets.ModelViewSet):
         from notifications.models import Notification
         Notification.objects.create(
             receiver=rental.renter,
-            title=f"Left Stop #{stop_order}",
-            message=f"Your driver has left stop #{stop_order}: {stop.address}",
+            title=f"🚗 Left Stop #{stop_order}!",
+            message=f"Your driver has left stop #{stop_order}: {stop.address}. Continuing your journey! 🚀",
             notification_type="RENTAL",
             data={
                 'rental_id': rental.id,
@@ -1771,8 +1771,8 @@ class RentalViewSet(viewsets.ModelViewSet):
         from notifications.models import Notification
         Notification.objects.create(
             receiver=rental.renter,
-            title="Trip Ended",
-            message=f"Your trip with {rental.car.brand} {rental.car.model} has ended. Thank you for using our service!",
+            title="🏁 Trip Completed Successfully!",
+            message=f"Congratulations! Your trip with {rental.car.brand} {rental.car.model} has ended successfully. Thank you for choosing our service! 🎉",
             notification_type="RENTAL",
             data={
                 'rental_id': rental.id,
@@ -1928,8 +1928,8 @@ class RentalViewSet(viewsets.ModelViewSet):
         from notifications.models import Notification
         Notification.objects.create(
             receiver=rental.car.owner,
-            title="المستأجر في الطريق",
-            message=f"المستأجر في طريقه إلى {rental.pickup_address}. يرجى الاستعداد.",
+            title="🚗 Renter On The Way!",
+            message=f"Great news! The renter is on their way to {rental.pickup_address}. Please be ready for pickup! 🎯",
             notification_type="RENTAL",
             data={
                 'rental_id': rental.id,
@@ -2236,8 +2236,8 @@ class RentalViewSet(viewsets.ModelViewSet):
             # إشعار للسائق
             Notification.objects.create(
                 receiver=rental.car.owner,
-                title="Payout Processed",
-                message=f"Your earnings of {driver_earnings} EGP have been transferred to your wallet for rental #{rental.id}.",
+                title="💰 Payout Processed Successfully!",
+                message=f"Excellent! Your earnings of {driver_earnings} EGP have been transferred to your wallet for rental #{rental.id}. Great job! 🎉",
                 notification_type="PAYMENT",
                 data={
                     'rental_id': rental.id,
@@ -2250,8 +2250,8 @@ class RentalViewSet(viewsets.ModelViewSet):
             # إشعار للمستأجر
             Notification.objects.create(
                 receiver=rental.renter,
-                title="Trip Completed",
-                message=f"Your trip with {rental.car.brand} {rental.car.model} has been completed and all payments processed.",
+                title="🎉 Trip Completed Successfully!",
+                message=f"Perfect! Your trip with {rental.car.brand} {rental.car.model} has been completed and all payments processed successfully. Thank you for choosing our service! 🚗",
                 notification_type="RENTAL",
                 data={
                     'rental_id': rental.id,
@@ -2868,8 +2868,8 @@ class RentalViewSet(viewsets.ModelViewSet):
             from notifications.models import Notification
             Notification.objects.create(
                 receiver=rental.renter,
-                title="تم إلغاء الحجز",
-                message=f"تم إلغاء حجزك لسيارة {rental.car.brand} {rental.car.model} من قبل المالك",
+                title="❌ Rental Cancelled!",
+                message=f"Unfortunately, your rental for {rental.car.brand} {rental.car.model} has been cancelled by the owner. We apologize for any inconvenience.",
                 notification_type="RENTAL_CANCELED",
                 data={
                     'rental_id': rental.id,

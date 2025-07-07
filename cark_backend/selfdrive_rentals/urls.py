@@ -11,7 +11,7 @@ from .views import (
     SelfDriveRentalViewSet, NewCardDepositPaymentView, PriceCalculatorView,
     OwnerPendingPaymentsView, RentalStatusTimelineView, RentalDashboardView,
     CalculateExcessView, RenterDropoffPreviewView, OwnerDropoffPreviewView,
-    RentalSummaryView
+    RentalSummaryView, CurrentOdometerReadingView
 )
 
 router = DefaultRouter()
@@ -35,4 +35,7 @@ urlpatterns += [
     path('selfdrive-rentals/<int:rental_id>/renter-dropoff-preview/', RenterDropoffPreviewView.as_view(), name='renter-dropoff-preview'),
     path('selfdrive-rentals/<int:rental_id>/owner-dropoff-preview/', OwnerDropoffPreviewView.as_view(), name='owner-dropoff-preview'),
     path('selfdrive-rentals/<int:rental_id>/summary/', RentalSummaryView.as_view(), name='rental-summary'),
+    
+    # Odometer reading endpoint
+    path('selfdrive-rentals/<int:rental_id>/current-odometer/', CurrentOdometerReadingView.as_view(), name='current-odometer'),
 ]
